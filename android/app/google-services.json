@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1044665638768",
+    "project_id": "barberxe-fcfe3",
+    "storage_bucket": "barberxe-fcfe3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1044665638768:android:d626d475b37785075a39b5",
+        "android_client_info": {
+          "package_name": "com.example.barber_xe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDguWtJad8BPVwizBjcXS69sPYtnvi9Sfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
