@@ -25,34 +25,54 @@ class AuthController with ChangeNotifier {
   User? get user => _user;
 
   Future<void> login(String email, String password, BuildContext context) async {
-  _isLoading = true;
-  _errorMessage = null;
-  notifyListeners();
-
-  try {
-    final user = await _authService.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    
-    if (user != null) {
-      // Cargar perfil del usuario
-      final profileController = Provider.of<ProfileController>(context, listen: false);
-      await profileController.loadCurrentUser();
-      
-      // Navegar al perfil
-      if (Navigator.of(context).mounted) {
-        Navigator.of(context).pushReplacementNamed('/profile');
-      }
-    }
-  } catch (e) {
-    _errorMessage = e.toString();
-    rethrow;
-  } finally {
-    _isLoading = false;
+    _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
+
+    try {
+      final user = await _authService.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      if (user != null) {
+        // Cargar perfil del usuario
+        final profileController = Provider.of<ProfileController>(context, listen: false);
+        await profileController.loadCurrentUser();
+        
+        // Navegar según el rol
+        if (Navigator.of(context).mounted) {
+          if (profileController.currentUser?.isAdmin ?? false) {
+            Navigator.of(context).pushReplacementNamed('/admin/home');
+          } else {
+            Navigator.of(context).pushReplacementNamed('/home');
+          }
+        }
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
-}
+
+  Future<void> signOut() async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      await _authService.signOut();
+      _user = null;
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> register(
     String email,
@@ -105,7 +125,7 @@ class AuthController with ChangeNotifier {
       throw Exception(_errorMessage);
     } on ArgumentError catch (e) {
       _errorMessage = e.message;
-      throw e;
+      rethrow;
     } catch (e) {
       _errorMessage = 'Error al registrar: ${e.toString()}';
       throw Exception(_errorMessage);
