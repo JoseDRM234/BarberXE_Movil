@@ -3,7 +3,6 @@ import 'package:barber_xe/pages/widget/custom_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../controllers/profile_controller.dart';
-import '../../../models/profile_data.dart' as model;
 
 class ProfileForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;

@@ -1,4 +1,6 @@
+import 'package:barber_xe/controllers/home_controller.dart';
 import 'package:barber_xe/firebase_options.dart';
+import 'package:barber_xe/pages/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -45,6 +47,11 @@ void main() async {
               userService: context.read<UserService>(),
             ),
           ),
+          ChangeNotifierProvider(
+          create: (context) => HomeController(
+            userService: context.read<UserService>(),
+          ),
+        ),
         ],
       child: const MyApp(),
     ),
@@ -105,7 +112,8 @@ class MyApp extends StatelessWidget {
       ),
       home: const AuthChecker(),
       routes: {
-        '/login': (context) => const LoginPage(),
+        '/home': (context) => const HomePage(),
+        //'/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
         '/profile': (context) => const ProfilePage(),
       },
@@ -134,7 +142,7 @@ class AuthChecker extends StatelessWidget {
             future: _loadUserAndNavigate(context, authController),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.done) {
-                return const ProfilePage();
+                return const HomePage();
               }
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
@@ -153,11 +161,19 @@ class AuthChecker extends StatelessWidget {
     try {
       final profileController = Provider.of<ProfileController>(context, listen: false);
       await profileController.loadCurrentUser();
+      
+      final homeController = Provider.of<HomeController>(context, listen: false);
+      await homeController.loadServices();
+
+      // Verifica si el widget sigue montado
+      if (context.mounted) {
+        // No necesitas navegar aquí ya que el FutureBuilder ya maneja la navegación
+      }
     } catch (e) {
       debugPrint('Error loading user: $e');
-      if (Navigator.of(context).mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar perfil: ${e.toString()}')),
+          SnackBar(content: Text('Error al cargar datos: ${e.toString()}')),
         );
       }
     }
