@@ -10,7 +10,7 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final GlobalKey<FormState> _profileFormKey = GlobalKey<FormState>();
+    final GlobalKey<FormState> profileFormKey = GlobalKey<FormState>();
 
     return Scaffold(
       appBar: AppBar(
@@ -29,7 +29,7 @@ class ProfilePage extends StatelessWidget {
                 icon: Icon(controller.isEditing ? Icons.save : Icons.edit),
                 onPressed: () async {
                 if (controller.isEditing) {
-                  if (_profileFormKey.currentState?.validate() ?? false) {
+                  if (profileFormKey.currentState?.validate() ?? false) {
                     final profileForm = context.findAncestorStateOfType<ProfileFormState>();
                     if (profileForm != null) {
                       final profileData = profileForm.getProfileData();
@@ -69,7 +69,7 @@ class ProfilePage extends StatelessWidget {
               children: [
                 const ProfileHeader(),
                 const SizedBox(height: 20),
-                ProfileForm(formKey: _profileFormKey),
+                ProfileForm(formKey: profileFormKey),
                 if (controller.isAdmin) const AdminPanel(),
               ],
             ),
