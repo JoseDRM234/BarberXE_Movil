@@ -1,22 +1,20 @@
+import 'package:barber_xe/models/service_model.dart';
 import 'package:barber_xe/pages/auth/login_page.dart';
 import 'package:barber_xe/pages/auth/register_page.dart';
 import 'package:barber_xe/pages/home/home_page.dart';
 import 'package:barber_xe/pages/profile/profile_page.dart';
+import 'package:barber_xe/pages/services/service_page.dart';
 import 'package:barber_xe/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// Importa las nuevas páginas
-import 'package:barber_xe/pages/widget/add_combo_page.dart';
-import 'package:barber_xe/pages/widget/add_service_page.dart';
 
 class AppRouter {
   static const String login = '/login';
   static const String register = '/register';
   static const String home = '/home';
   static const String profile = '/profile';
-  static const String addCombo = '/add-combo';
-  static const String addService = '/add-service';
+  static const String service = '/service';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final authService = Provider.of<AuthService>(navigatorKey.currentContext!, listen: false);
@@ -47,10 +45,11 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const HomePage());
       case profile:
         return MaterialPageRoute(builder: (_) => const ProfilePage());
-      case addCombo:
-        return MaterialPageRoute(builder: (_) => const AddComboPage());
-      case addService:
-        return MaterialPageRoute(builder: (_) => const AddServicePage());
+      case service:
+        final service = settings.arguments as BarberService?;
+        return MaterialPageRoute(
+          builder: (_) => ServicePage(service: service),
+        );
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

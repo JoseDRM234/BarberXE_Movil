@@ -27,7 +27,12 @@ class ServiceController with ChangeNotifier {
     }).toList();
   }
 
-  
+  Future<List<BarberService>> getAvailableServices() async {
+    if (_services.isEmpty) {
+      await loadServicesAndCombos();
+    }
+    return _services.where((service) => service.isActive).toList();
+  }
 
   Future<void> loadServicesAndCombos() async {
     _isLoading = true;
@@ -59,10 +64,10 @@ class ServiceController with ChangeNotifier {
   Future<List<BarberService>> getServicesForCombo(ServiceCombo combo) async {
   try {
     // Validamos que haya IDs
-    if (combo.serviceIds == null || combo.serviceIds!.isEmpty) return [];
+    if (combo.serviceIds.isEmpty) return [];
 
     // Obtener documentos desde Firestore
-    final docs = await _firestoreService.getServicesByIds(combo.serviceIds!);
+    final docs = await _firestoreService.getServicesByIds(combo.serviceIds);
 
     // Convertirlos en objetos BarberService
     return docs
@@ -87,40 +92,46 @@ Future<List<DocumentSnapshot>> getServicesByFilter(Map<String, dynamic> filters)
     return querySnapshot.docs;
   }
 
-  Future<void> addCombo({
-    required String name,
-    required String description,
-    required List<String> serviceIds,
-    required double discount,
-    String? imageUrl,
-  }) async {
-    final serviceDocs = await _firestoreService.getServicesByIds(serviceIds);
-    final validDocs = serviceDocs.where((d) => d.exists).toList();
-    if (validDocs.isEmpty) throw Exception('No hay servicios válidos');
-
-      final totalPrice = validDocs.fold<double>(0, (sum, doc) {
+  // En ServiceController
+Future<void> addCombo({
+  required String name,
+  required String description,
+  required List<String> serviceIds,
+  required double discount,
+  String? imageUrl,
+}) async {
+  try {
+      // Obtener servicios actualizados
+      final services = await _firestoreService.getServicesByIds(serviceIds);
+      
+      // Cálculo de precios y duración
+      final totalPrice = services.fold<double>(0, (sum, doc) {
         final data = doc.data() as Map<String, dynamic>;
         return sum + (data['price'] as num).toDouble();
       });
 
-      final totalDuration = validDocs.fold<int>(0, (sum, doc) {
+      final totalDuration = services.fold<int>(0, (sum, doc) {
         final data = doc.data() as Map<String, dynamic>;
         return sum + (data['duration'] as num).toInt();
       });
 
-    await _firestoreService.addCombo({
-      'name': name,
-      'description': description,
-      'totalPrice': totalPrice - discount,
-      'discount': discount,
-      'totalDuration': totalDuration,
-      'serviceIds': serviceIds,
-      'imageUrl': imageUrl,
-      'isActive': true,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      await _firestoreService.addCombo({
+        'name': name,
+        'description': description,
+        'totalPrice': totalPrice - discount,
+        'discount': discount,
+        'totalDuration': totalDuration,
+        'serviceIds': serviceIds,
+        'imageUrl': imageUrl,
+        'isActive': true,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    await loadServicesAndCombos();
+      await loadServicesAndCombos(); // Forzar recarga
+    } catch (e) {
+      debugPrint('Error adding combo: $e');
+      rethrow;
+    }
   }
 
   Future<void> updateCombo(ServiceCombo combo) async {
@@ -147,5 +158,25 @@ Future<List<DocumentSnapshot>> getServicesByFilter(Map<String, dynamic> filters)
   void setSearchQuery(String query) {
     _searchQuery = query;
     notifyListeners();
+  }
+
+  Future<List<BarberService>> getServicesByIds(List<String> ids) async {
+    try {
+      final docs = await _firestoreService.getServicesByIds(ids);
+      return docs
+          .where((doc) => doc.exists)
+          .map((doc) => BarberService.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting services by IDs: $e');
+      return [];
+    }
+  }
+
+  Future<List<BarberService>> getActiveServices() async {
+    if (_services.isEmpty) {
+      await loadServicesAndCombos();
+    }
+    return _services.where((s) => s.isActive).toList();
   }
 }

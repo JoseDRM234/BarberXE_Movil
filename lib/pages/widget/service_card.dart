@@ -1,15 +1,18 @@
-// pages/home/widgets/service_card.dart
 import 'package:barber_xe/controllers/profile_controller.dart';
 import 'package:barber_xe/controllers/services_controller.dart';
-import 'package:barber_xe/pages/widget/service_management_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:barber_xe/models/service_model.dart';
 
 class ServiceCard extends StatelessWidget {
-  final BarberService service; // Cambiaría si decides trabajar con combo aquí también
+  final BarberService service;
+  final VoidCallback? onEdit; // Parámetro añadido
 
-  const ServiceCard({super.key, required this.service});
+  const ServiceCard({
+    super.key, 
+    required this.service,
+    this.onEdit, // Añadir al constructor
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -31,33 +34,29 @@ class ServiceCard extends StatelessWidget {
   }
 
   Widget _buildAdminActions(BuildContext context) {
-    return Row(
+  return Container(
+    constraints: const BoxConstraints(maxHeight: 40), // Altura máxima
+    child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: const Icon(Icons.edit, size: 20),
-          onPressed: () => _editService(context),
+          icon: const Icon(Icons.edit),
+          iconSize: 18, // Tamaño reducido
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          onPressed: onEdit,
         ),
         IconButton(
-          icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+          icon: const Icon(Icons.delete, color: Colors.red),
+          iconSize: 18, // Tamaño reducido
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           onPressed: () => _deleteService(context),
         ),
       ],
-    );
-  }
-
-  void _editService(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: ServiceManagementDialog(serviceToEdit: service),
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Future<void> _deleteService(BuildContext context) async {
     final confirmed = await showDialog<bool>( 
