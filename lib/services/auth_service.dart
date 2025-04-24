@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -39,8 +40,15 @@ class AuthService {
   }
 }
 
-  Future<void> signOut() async => await _auth.signOut();
-
+  Future<void> signOut() async {
+    try {
+      await _auth.signOut();
+      debugPrint('Sesión cerrada correctamente en Firebase');
+    } catch (e) {
+      debugPrint('Error al cerrar sesión: $e');
+      throw Exception('No se pudo cerrar la sesión');
+    }
+  }
   Future<void> updatePassword(String newPassword) async {
     if (_auth.currentUser != null) {
       await _auth.currentUser!.updatePassword(newPassword.trim());
@@ -73,5 +81,14 @@ class AuthService {
     );
     
     return await FirebaseAuth.instance.signInWithCredential(credential);
+  }
+
+  Future<User?> get currentUserFuture async {
+    try {
+      return _auth.currentUser;
+    } catch (e) {
+      debugPrint('Error getting current user: $e');
+      return null;
+    }
   }
 }

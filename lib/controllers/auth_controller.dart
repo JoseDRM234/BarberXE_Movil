@@ -1,5 +1,8 @@
 import 'package:barber_xe/controllers/profile_controller.dart';
 import 'package:barber_xe/models/user_model.dart';
+import 'package:barber_xe/pages/home/home_page.dart';
+import 'package:barber_xe/routes/app_routes.dart';
+import 'package:barber_xe/routes/route_names.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,33 +27,34 @@ class AuthController with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   User? get user => _user;
 
-  Future<void> login(String email, String password, BuildContext context) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> login(String email, String password) async {
+  _isLoading = true;
+  _errorMessage = null;
+  notifyListeners();
 
-    try {
+  try {
       final user = await _authService.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
       
-      if (user != null) {
-        // Cargar perfil del usuario
-        final profileController = Provider.of<ProfileController>(context, listen: false);
-        await profileController.loadCurrentUser();
-        
-        // Navegar según el rol
-        if (Navigator.of(context).mounted) {
-          if (profileController.currentUser?.isAdmin ?? false) {
-            Navigator.of(context).pushReplacementNamed('/admin/home');
-          } else {
-            Navigator.of(context).pushReplacementNamed('/home');
-          }
-        }
-      }
+      if (user == null) throw Exception('No se pudo iniciar sesión');
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        AppRouter.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          RouteNames.home,
+          (route) => false,
+        );
+      });
+
     } catch (e) {
       _errorMessage = e.toString();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (AppRouter.navigatorKey.currentState?.overlay?.context != null) {
+          ScaffoldMessenger.of(AppRouter.navigatorKey.currentState!.overlay!.context)
+            .showSnackBar(SnackBar(content: Text(_errorMessage!)));
+        }
+      });
       rethrow;
     } finally {
       _isLoading = false;
