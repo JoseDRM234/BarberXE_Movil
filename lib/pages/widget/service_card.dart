@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:barber_xe/models/service_model.dart';
 
 class ServiceCard extends StatelessWidget {
-  final Service service;
+  final BarberService service; // Cambiaría si decides trabajar con combo aquí también
 
   const ServiceCard({super.key, required this.service});
 
@@ -60,7 +60,7 @@ class ServiceCard extends StatelessWidget {
   }
 
   Future<void> _deleteService(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showDialog<bool>( 
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmar eliminación'),

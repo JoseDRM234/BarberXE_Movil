@@ -42,9 +42,10 @@ class ProfileController with ChangeNotifier {
 
   Future<void> loadCurrentUser() async {
   if (_isLoading) return;
-  _isLoading = true;   
-  notifyListeners();
-
+  _isLoading = true;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!_isDisposed) notifyListeners();
+  });
   try {
       final authService = Provider.of<AuthService>(
         AppRouter.navigatorKey.currentContext!,
@@ -78,7 +79,11 @@ class ProfileController with ChangeNotifier {
       _currentUser = null;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_isDisposed) {
+          notifyListeners();
+        }
+      });
     }
   }
 
@@ -121,28 +126,31 @@ class ProfileController with ChangeNotifier {
     if (_currentUser == null) return null;
 
     try {
-      if (_currentUser!.photoUrl != null) {
-        await _storageService.deleteProfileImage(_currentUser!.photoUrl);
+      final previousImageUrl = _currentUser!.photoUrl;
+
+      if (previousImageUrl != null && previousImageUrl.isNotEmpty) {
+        await _storageService.deleteProfileImage(previousImageUrl);
       }
 
-      String? imageUrl = await _storageService.uploadProfileImage(
+      String? newImageUrl = await _storageService.uploadProfileImage(
         _currentUser!.uid,
         image,
       );
 
-      if (imageUrl != null) {
+      if (newImageUrl != null) {
         await _userService.updateUser(_currentUser!.uid, {
-          'fotoUrl': imageUrl,
+          'photoUrl': newImageUrl,
         });
-        await loadCurrentUser();
+        await loadCurrentUser(); // refresca datos locales
       }
 
-      return imageUrl;
+      return newImageUrl;
     } catch (e) {
-      print("Error uploading image: $e");
+      print("Error al subir imagen de perfil: $e");
       return null;
     }
   }
+
 
   Future<void> clearProfile() async {
     _currentUser = null;
@@ -173,6 +181,12 @@ class ProfileController with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 
 }

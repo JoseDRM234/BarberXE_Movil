@@ -1,14 +1,8 @@
 import 'package:barber_xe/models/profile_data.dart';
 import 'package:barber_xe/models/user_model.dart';
-import 'package:barber_xe/pages/widget/custom_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../controllers/profile_controller.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../../controllers/profile_controller.dart';
-import 'package:barber_xe/models/profile_data.dart';
-import 'package:barber_xe/models/user_model.dart';
 
 class ProfileForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;

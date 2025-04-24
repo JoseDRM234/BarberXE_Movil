@@ -1,11 +1,10 @@
-
 import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:barber_xe/models/service_model.dart';
 
 class ServiceManagementDialog extends StatefulWidget {
-  final Service? serviceToEdit;
+  final BarberService? serviceToEdit;
 
   const ServiceManagementDialog({super.key, this.serviceToEdit});
 
@@ -19,10 +18,13 @@ class _ServiceManagementDialogState extends State<ServiceManagementDialog> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _durationController = TextEditingController();
-  
+
   String? _selectedCategory;
   bool _isCombo = false;
   final List<String> _categories = ['Corte', 'Barba', 'Facial', 'Combo', 'Otro'];
+
+  List<BarberService> _allServices = [];
+  List<String> _selectedServiceIds = [];
 
   @override
   void initState() {
@@ -30,7 +32,18 @@ class _ServiceManagementDialogState extends State<ServiceManagementDialog> {
     if (widget.serviceToEdit != null) {
       _initializeFormWithServiceData();
     }
+    _loadAllServices();
   }
+
+  Future<void> _loadAllServices() async {
+    final serviceController = Provider.of<ServiceController>(context, listen: false);
+    
+    final servicesDocs = await serviceController.getServicesByFilter({'isActive': true});
+
+    setState(() {
+      _allServices = servicesDocs.map((doc) => BarberService.fromFirestore(doc)).toList();
+    });
+    }
 
   void _initializeFormWithServiceData() {
     final service = widget.serviceToEdit!;
@@ -39,7 +52,6 @@ class _ServiceManagementDialogState extends State<ServiceManagementDialog> {
     _priceController.text = service.price.toString();
     _durationController.text = service.duration.toString();
     _selectedCategory = service.category;
-    _isCombo = service.isCombo;
   }
 
   @override
@@ -67,13 +79,14 @@ class _ServiceManagementDialogState extends State<ServiceManagementDialog> {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
+
             _buildNameField(),
             _buildDescriptionField(),
             _buildPriceField(),
             _buildDurationField(),
             _buildCategoryDropdown(),
             _buildComboCheckbox(),
+            _buildServiceSelector(),
             const SizedBox(height: 20),
             _buildActionButtons(context),
           ],
@@ -152,6 +165,35 @@ class _ServiceManagementDialogState extends State<ServiceManagementDialog> {
     );
   }
 
+  Widget _buildServiceSelector() {
+    if (!_isCombo) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Selecciona los servicios que incluye el combo:'),
+        const SizedBox(height: 8),
+        if (_allServices.isEmpty)
+          const Text('No hay servicios disponibles', style: TextStyle(color: Colors.grey))
+        else
+          ..._allServices.map((service) => CheckboxListTile(
+            title: Text(service.name),
+            subtitle: Text('\$${service.price.toStringAsFixed(2)} - ${service.duration} min'),
+            value: _selectedServiceIds.contains(service.id),
+            onChanged: (selected) {
+              setState(() {
+                if (selected == true) {
+                  _selectedServiceIds.add(service.id);
+                } else {
+                  _selectedServiceIds.remove(service.id);
+                }
+              });
+            },
+          )),
+      ],
+    );
+  }
+
   Widget _buildActionButtons(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -174,24 +216,35 @@ class _ServiceManagementDialogState extends State<ServiceManagementDialog> {
   Future<void> _saveService(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
       final serviceController = Provider.of<ServiceController>(context, listen: false);
-      
-      final service = Service(
-        id: widget.serviceToEdit?.id ?? '',
-        name: _nameController.text,
-        description: _descriptionController.text,
-        price: double.parse(_priceController.text),
-        duration: int.parse(_durationController.text),
-        category: _selectedCategory ?? 'Otro',
-        isCombo: _isCombo,
-        isActive: true,
-      );
-      
+
       try {
-        if (widget.serviceToEdit != null) {
-          await serviceController.updateService(service);
+        if (_isCombo) {
+          // Guardar como combo
+          await serviceController.addCombo(
+            name: _nameController.text,
+            description: _descriptionController.text,
+            serviceIds: _selectedServiceIds,
+            discount: 0.0, // Puedes agregar un campo para el descuento si lo necesitas
+          );
         } else {
-          await serviceController.addService(service);
+          // Guardar como servicio individual
+          final service = BarberService(
+            id: widget.serviceToEdit?.id ?? '',
+            name: _nameController.text,
+            description: _descriptionController.text,
+            price: double.parse(_priceController.text),
+            duration: int.parse(_durationController.text),
+            category: _selectedCategory ?? 'Otro',
+            isActive: true,
+          );
+
+          if (widget.serviceToEdit != null) {
+            await serviceController.updateService(service);
+          } else {
+            await serviceController.addService(service);
+          }
         }
+        
         if (mounted) Navigator.of(context).pop();
       } catch (e) {
         if (mounted) {
