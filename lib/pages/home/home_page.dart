@@ -4,8 +4,6 @@ import 'package:barber_xe/pages/widget/service_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-
-
 class HomePage extends StatelessWidget {
   static const String routeName = '/home';
 
@@ -16,7 +14,7 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Barbería El Estilo'),
-        backgroundColor: const Color(0xFF757575),
+        backgroundColor: const Color.fromARGB(255, 10, 10, 10),
         automaticallyImplyLeading: false,
       ),
       body: const _HomeContent(),
@@ -24,12 +22,12 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  BottomNavigationBar _buildBottomNavBar(BuildContext context) {
+  static BottomNavigationBar _buildBottomNavBar(BuildContext context) {
     return BottomNavigationBar(
-      backgroundColor: Colors.white,
-      selectedItemColor: Colors.brown[800],
-      unselectedItemColor: Colors.grey,
-      currentIndex: 0, // Home está seleccionado
+      backgroundColor: const Color.fromARGB(255, 213, 210, 210),
+      selectedItemColor: const Color.fromARGB(255, 0, 0, 0),
+      unselectedItemColor: const Color.fromARGB(255, 0, 0, 0),
+      currentIndex: 0,
       type: BottomNavigationBarType.fixed,
       items: const [
         BottomNavigationBarItem(
@@ -42,17 +40,10 @@ class HomePage extends StatelessWidget {
           icon: Icon(Icons.person), label: 'Perfil'),
       ],
       onTap: (index) {
-        // Navegación entre páginas
         switch (index) {
-          case 0:
-            // Ya estamos en home
-            break;
-          case 1:
-            // Navigator.pushNamed(context, '/appointments');
-            break;
-          case 2:
-            // Navigator.pushNamed(context, '/notifications');
-            break;
+          case 0: break;
+          case 1: break;
+          case 2: break;
           case 3:
             Navigator.pushNamed(context, '/profile');
             break;
@@ -95,16 +86,11 @@ class _HomeContentState extends State<_HomeContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Barra de búsqueda
           _buildSearchBar(homeController),
           const SizedBox(height: 20),
-          
-          // Sección de Combos
-          _buildCombosSection(homeController),
+          _buildCombosSection(homeController, context),
           const SizedBox(height: 30),
-          
-          // Sección de Servicios Individuales
-          _buildServicesSection(homeController),
+          _buildServicesSection(homeController, context),
         ],
       ),
     );
@@ -128,7 +114,7 @@ class _HomeContentState extends State<_HomeContent> {
     );
   }
 
-  Widget _buildCombosSection(HomeController homeController) {
+  Widget _buildCombosSection(HomeController homeController, BuildContext context) {
     if (homeController.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -136,13 +122,25 @@ class _HomeContentState extends State<_HomeContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Combos',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.brown,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Combos',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline, 
+                color: Colors.black),
+              onPressed: () {
+                Navigator.pushNamed(context, '/add-combo');
+              },
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -161,7 +159,7 @@ class _HomeContentState extends State<_HomeContent> {
     );
   }
 
-  Widget _buildServicesSection(HomeController homeController) {
+  Widget _buildServicesSection(HomeController homeController, BuildContext context) {
     if (homeController.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -169,13 +167,25 @@ class _HomeContentState extends State<_HomeContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Servicios Individuales',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.brown,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Servicios Individuales',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline, 
+                color: Colors.black),
+              onPressed: () {
+                Navigator.pushNamed(context, '/add-service');
+              },
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         ListView.separated(
