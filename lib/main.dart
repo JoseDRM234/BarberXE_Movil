@@ -1,10 +1,14 @@
 import 'package:barber_xe/controllers/home_controller.dart';
+import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:barber_xe/firebase_options.dart';
+import 'package:barber_xe/pages/auth/login_page.dart';
 import 'package:barber_xe/pages/home/home_page.dart';
+import 'package:barber_xe/routes/app_routes.dart';
+import 'package:barber_xe/routes/route_names.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 // Services
 import 'services/auth_service.dart';
@@ -15,10 +19,6 @@ import 'services/storage_service.dart';
 import 'controllers/profile_controller.dart';
 import 'controllers/auth_controller.dart';
 
-// Pages
-import 'pages/auth/login_page.dart';
-import 'pages/auth/register_page.dart';
-import 'pages/profile/profile_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,13 +48,14 @@ void main() async {
             ),
           ),
           ChangeNotifierProvider(
-          create: (context) => HomeController(
-            userService: context.read<UserService>(),
+            create: (context) => HomeController(
+              userService: context.read<UserService>(),
+            ),
           ),
-        ),
+          ChangeNotifierProvider(create: (_) => ServiceController()),
         ],
-      child: const MyApp(),
-    ),
+        child: const MyApp(),
+      ),
     );
   } catch (e) {
     runApp(
@@ -110,13 +111,10 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
+      navigatorKey: AppRouter.navigatorKey,
+      onGenerateRoute: AppRouter.generateRoute,
+      initialRoute: RouteNames.splash,
       home: const AuthChecker(),
-      routes: {
-        '/home': (context) => const HomePage(),
-        //'/login': (context) => const LoginPage(),
-        '/register': (context) => const RegisterPage(),
-        '/profile': (context) => const ProfilePage(),
-      },
     );
   }
 }
@@ -126,56 +124,136 @@ class AuthChecker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-    final authController = Provider.of<AuthController>(context, listen: false);
+    return Consumer<AuthService>(
+      builder: (context, authService, _) {
+        return FutureBuilder<User?>(
+          future: authService.currentUserFuture,
+          builder: (context, authSnapshot) {
+            if (authSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            }
+            if (authSnapshot.hasError || authSnapshot.data == null) {
+              return const LoginPage();
+            }
 
-    return StreamBuilder<User?>(
-      stream: authService.authStateChanges,
+            return _ProfileLoader(user: authSnapshot.data!);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ProfileLoader extends StatefulWidget {
+  final User user;
+
+  const _ProfileLoader({required this.user});
+
+  @override
+  State<_ProfileLoader> createState() => _ProfileLoaderState();
+}
+
+class _ProfileLoaderState extends State<_ProfileLoader> {
+  late Future<void> _profileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileFuture = _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profileController = context.read<ProfileController>();
+    await profileController.loadCurrentUser();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _profileFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.active) {
-          final user = snapshot.data;
-          if (user == null) {
-            return const LoginPage();
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        return const HomePage();
+      },
+    );
+  }
+}
+
+class _AppInitializer extends StatefulWidget {
+  final User user;
+  final Widget child;
+
+  const _AppInitializer({
+    required this.user,
+    required this.child,
+  });
+
+  @override
+  State<_AppInitializer> createState() => _AppInitializerState();
+}
+
+class _AppInitializerState extends State<_AppInitializer> {
+  late Future<void> _initialization;
+  bool _disposed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialization = _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      if (_disposed) return;
+
+      final profileController = Provider.of<ProfileController>(
+        AppRouter.navigatorKey.currentContext!,
+        listen: false,
+      );
+      await profileController.loadCurrentUser();
+      
+      if (_disposed) return;
+
+      final homeController = Provider.of<HomeController>(
+        AppRouter.navigatorKey.currentContext!,
+        listen: false,
+      );
+      await homeController.loadServices();
+    } catch (e) {
+      debugPrint('Error initializing app: $e');
+      if (!_disposed && AppRouter.navigatorKey.currentState?.mounted == true) {
+        ScaffoldMessenger.of(AppRouter.navigatorKey.currentContext!).showSnackBar(
+          SnackBar(content: Text('Error loading data: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _initialization,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasError) {
+            return Scaffold(
+              body: Center(child: Text('Error: ${snapshot.error}')),
+            );
           }
-          
-          return FutureBuilder(
-            future: _loadUserAndNavigate(context, authController),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.done) {
-                return const HomePage();
-              }
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            },
-          );
+          return widget.child;
         }
         return const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         );
       },
     );
-  }
-
-  Future<void> _loadUserAndNavigate(BuildContext context, AuthController authController) async {
-    try {
-      final profileController = Provider.of<ProfileController>(context, listen: false);
-      await profileController.loadCurrentUser();
-      
-      final homeController = Provider.of<HomeController>(context, listen: false);
-      await homeController.loadServices();
-
-      // Verifica si el widget sigue montado
-      if (context.mounted) {
-        // No necesitas navegar aquí ya que el FutureBuilder ya maneja la navegación
-      }
-    } catch (e) {
-      debugPrint('Error loading user: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar datos: ${e.toString()}')),
-        );
-      }
-    }
   }
 }
