@@ -33,6 +33,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isCombo ? 'Seleccionar Servicios para Combo' : 'Seleccionar Servicios'),
+        backgroundColor: Colors.black, // AppBar en color negro
+        foregroundColor: Colors.white, // Iconos y texto en blanco
         actions: [
           IconButton(
             icon: const Icon(Icons.save),

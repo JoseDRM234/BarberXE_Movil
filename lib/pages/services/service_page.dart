@@ -62,6 +62,8 @@ class _ServicePageState extends State<ServicePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.black, // AppBar en color negro
+        foregroundColor: Colors.white, // Iconos y texto en blanco
         title: Text(widget.service != null ? 'Editar Servicio' : 'Nuevo Servicio'),
         actions: [IconButton(icon: const Icon(Icons.save), onPressed: _saveService)],
       ),
