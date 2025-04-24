@@ -1,4 +1,3 @@
-import 'package:barber_xe/controllers/home_controller.dart';
 import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:barber_xe/firebase_options.dart';
 import 'package:barber_xe/pages/auth/login_page.dart';

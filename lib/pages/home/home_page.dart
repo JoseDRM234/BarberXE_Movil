@@ -1,8 +1,8 @@
 import 'package:barber_xe/controllers/services_controller.dart';
-import 'package:barber_xe/models/service_model.dart';
+import 'package:barber_xe/pages/services/service_combo_page.dart';
+import 'package:barber_xe/pages/services/service_page.dart';
 import 'package:barber_xe/pages/widget/combo_card.dart';
 import 'package:barber_xe/pages/widget/service_card.dart';
-import 'package:barber_xe/pages/widget/service_management_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -69,124 +69,80 @@ class _HomeContentState extends State<_HomeContent> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Llamar al método para cargar los servicios y combos
-      Provider.of<ServiceController>(context, listen: false).loadServicesAndCombos();
+      context.read<ServiceController>().loadServicesAndCombos();
     });
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final serviceController = Provider.of<ServiceController>(context);
+    final serviceController = context.watch<ServiceController>();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSearchBar(serviceController),
-          const SizedBox(height: 20),
-          _buildCombosSection(serviceController, context),
-          const SizedBox(height: 30),
-          _buildServicesSection(serviceController, context),
-        ],
+    return RefreshIndicator(
+      onRefresh: () => serviceController.loadServicesAndCombos(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildSearchBar(serviceController),
+            const SizedBox(height: 20),
+            _buildCombosSection(context),
+            const SizedBox(height: 30),
+            _buildServicesSection(context),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSearchBar(ServiceController serviceController) {
+  Widget _buildSearchBar(ServiceController controller) {
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
-        hintText: 'Buscar servicios o combos...',
+        hintText: 'Buscar...',
         prefixIcon: const Icon(Icons.search),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            _searchController.clear();
+            controller.setSearchQuery('');
+          },
         ),
-        filled: true,
-        fillColor: Colors.grey[200],
-        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       ),
-      onChanged: (value) => serviceController.setSearchQuery(value),
+      onChanged: controller.setSearchQuery,
     );
   }
 
-  void _showAddServiceDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: const ServiceManagementDialog(),
-      ),
-    );
-  }
-
-  void _showAddComboDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: ServiceManagementDialog(
-          serviceToEdit: BarberService(
-            id: '',
-            name: '',
-            description: '',
-            price: 0,
-            duration: 0,
-            category: 'Combo',
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCombosSection(ServiceController serviceController, BuildContext context) {
-    if (serviceController.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  Widget _buildCombosSection(BuildContext context) {
+    final controller = context.watch<ServiceController>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Combos',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline, color: Colors.black),
-              onPressed: () => _showAddComboDialog(context),
-            ),
-          ],
+        _buildSectionHeader(
+          title: 'Combos',
+          onAdd: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ServiceComboPage()),
+          ),
         ),
         const SizedBox(height: 12),
         SizedBox(
           height: 220,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: serviceController.combos.length,
+            itemCount: controller.combos.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
-              final combo = serviceController.combos[index];
-              return ComboCard(combo: combo);
+              final combo = controller.combos[index];
+              return ComboCard(
+                combo: combo,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ServiceComboPage(combo: combo),
+                  ),
+                ),
+              );
             },
           ),
         ),
@@ -194,41 +150,56 @@ class _HomeContentState extends State<_HomeContent> {
     );
   }
 
-  Widget _buildServicesSection(ServiceController serviceController, BuildContext context) {
-    if (serviceController.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  Widget _buildServicesSection(BuildContext context) {
+    final controller = context.watch<ServiceController>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Servicios Individuales',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline, color: Colors.black),
-              onPressed: () => _showAddServiceDialog(context),
-            ),
-          ],
+        _buildSectionHeader(
+          title: 'Servicios',
+          onAdd: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ServicePage()), // Página corregida
+          ),
         ),
         const SizedBox(height: 12),
         ListView.separated(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
-          itemCount: serviceController.services.length,
+          itemCount: controller.services.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final service = serviceController.services[index];
-            return ServiceCard(service: service);
+            final service = controller.services[index];
+            return ServiceCard(
+              service: service,
+              onEdit: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ServicePage(service: service), // Envía el servicio a editar
+                ),
+              ),
+            );
           },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader({required String title, VoidCallback? onAdd}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline),
+          onPressed: onAdd,
         ),
       ],
     );

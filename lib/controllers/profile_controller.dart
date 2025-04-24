@@ -1,7 +1,6 @@
 import 'package:barber_xe/models/profile_data.dart';
 import 'package:barber_xe/routes/app_routes.dart';
 import 'package:barber_xe/routes/route_names.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
