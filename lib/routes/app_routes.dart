@@ -6,11 +6,17 @@ import 'package:barber_xe/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+// Importa las nuevas páginas
+import 'package:barber_xe/pages/widget/add_combo_page.dart';
+import 'package:barber_xe/pages/widget/add_service_page.dart';
+
 class AppRouter {
   static const String login = '/login';
   static const String register = '/register';
   static const String home = '/home';
   static const String profile = '/profile';
+  static const String addCombo = '/add-combo';
+  static const String addService = '/add-service';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final authService = Provider.of<AuthService>(navigatorKey.currentContext!, listen: false);
@@ -41,28 +47,31 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const HomePage());
       case profile:
         return MaterialPageRoute(builder: (_) => const ProfilePage());
+      case addCombo:
+        return MaterialPageRoute(builder: (_) => const AddComboPage());
+      case addService:
+        return MaterialPageRoute(builder: (_) => const AddServicePage());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
             body: Center(child: Text('No route defined for ${settings.name}')),
-        )
-      );
+          ),  // Paréntesis de cierre añadido aquí
+        );
     }
   }
 
-  
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-    static void showErrorSnackBar(String message) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final context = navigatorKey.currentState?.overlay?.context;
-        if (context != null && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
-        }
-      });
-    }
+  static void showErrorSnackBar(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = navigatorKey.currentState?.overlay?.context;
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    });
+  }
 
   static BuildContext? get safeContext {
     try {
