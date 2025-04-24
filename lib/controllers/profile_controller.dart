@@ -1,5 +1,10 @@
+import 'package:barber_xe/models/profile_data.dart';
+import 'package:barber_xe/routes/app_routes.dart';
+import 'package:barber_xe/routes/route_names.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
@@ -13,16 +18,21 @@ class ProfileController with ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   bool _isEditing = false;
-
+  bool _isDisposed = false;
+  
+  // Getters
+  UserModel? get currentUser => _currentUser;
+  bool get isLoading => _isLoading;
+  bool get isEditing => _isEditing;
+  bool get isAdmin => _currentUser?.role == 'admin';
+  
   ProfileController({
     required AuthService authService,
     required UserService userService,
     required StorageService storageService,
   })  : _authService = authService,
         _userService = userService,
-        _storageService = storageService {
-    loadCurrentUser();
-  }
+        _storageService = storageService;
 
   // Método para actualizar el AuthService
   void updateAuthService(AuthService authService) {
@@ -30,48 +40,47 @@ class ProfileController with ChangeNotifier {
     loadCurrentUser();
   }
 
-  UserModel? get currentUser => _currentUser;
-  bool get isLoading => _isLoading;
-  bool get isEditing => _isEditing;
-  bool get isAdmin => _currentUser?.isAdmin ?? false;
-
   Future<void> loadCurrentUser() async {
-  if (_authService.currentUser == null) {
-    _currentUser = null;
-    notifyListeners();
-    return;
-  }
-
-  _isLoading = true;
+  if (_isLoading) return;
+  _isLoading = true;   
   notifyListeners();
 
   try {
-    final userDoc = await _userService.getUser(_authService.currentUser!.uid);
-    
-    if (userDoc == null) {
-      // Crear usuario básico si no existe
-      final firebaseUser = _authService.currentUser!;
-      _currentUser = UserModel(
-        uid: firebaseUser.uid,
-        email: firebaseUser.email ?? '',
-        nombre: firebaseUser.displayName?.split(' ').first,
-        apellido: firebaseUser.displayName?.split(' ').last,
-        role: 'cliente',
-        createdAt: DateTime.now(),
-        activo: true,
+      final authService = Provider.of<AuthService>(
+        AppRouter.navigatorKey.currentContext!,
+        listen: false
       );
-      await _userService.createUser(_currentUser!);
-    } else {
-      _currentUser = userDoc;
+      
+      if (authService.currentUser == null) {
+        _currentUser = null;
+        return;
+      }
+
+      final userDoc = await _userService.getUser(authService.currentUser!.uid);
+      
+      if (userDoc == null) {
+        final firebaseUser = _authService.currentUser!;
+        _currentUser = UserModel(
+          uid: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          nombre: firebaseUser.displayName?.split(' ').first ?? '',
+          apellido: firebaseUser.displayName?.split(' ').last ?? '',
+          role: 'cliente',
+          createdAt: DateTime.now(),
+          activo: true,
+        );
+        await _userService.createUser(_currentUser!);
+      } else {
+        _currentUser = userDoc;
+      }
+    } catch (e) {
+      debugPrint('Error loading user: $e');
+      _currentUser = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-  } catch (e) {
-    debugPrint('Error loading user: $e');
-    _currentUser = null;
-  } finally {
-    _isLoading = false;
-    notifyListeners();
   }
-}
 
   Future<void> toggleEditMode() {
     _isEditing = !_isEditing;
@@ -135,26 +144,35 @@ class ProfileController with ChangeNotifier {
     }
   }
 
-  Future<void> logout() async {
-    await _authService.signOut();
+  Future<void> clearProfile() async {
     _currentUser = null;
+    _isLoading = false;
+    _isEditing = false;
     notifyListeners();
   }
 
-  updateAuth(AuthService authService) {}
-}
-class ProfileData {
-  final String? nombre;
-  final String? apellido;
-  final String? telefono;
-  final String? password;
-  final String? fotoUrl;
+  Future<void> logout() async {
+  _isLoading = true;
+  notifyListeners();
 
-  ProfileData({
-    this.nombre,
-    this.apellido,
-    this.telefono,
-    this.password,
-    this.fotoUrl,
-  });
+  try {
+      _currentUser = null;
+      _isEditing = false;
+      
+      await _authService.signOut();
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        AppRouter.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          RouteNames.login,
+          (route) => false,
+        );
+      });
+    } catch (e) {
+      debugPrint('Error en logout: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
 }
