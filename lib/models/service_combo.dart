@@ -1,43 +1,43 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class BarberService {
+class ServiceCombo {
   final String id;
   final String name;
   final String description;
-  final double price;
-  final int duration;
-  final String category;
+  final double totalPrice;
+  final double discount;
+  final int totalDuration;
+  final List<String> serviceIds;
   final String? imageUrl;
   final bool isActive;
   final DateTime createdAt;
-  final List<String> tags;
 
-  BarberService({
+  ServiceCombo({
     required this.id,
     required this.name,
     required this.description,
-    required this.price,
-    required this.duration,
-    this.category = 'hair',
+    required this.totalPrice,
+    required this.discount,
+    required this.totalDuration,
+    required this.serviceIds,
     this.imageUrl,
     this.isActive = true,
     DateTime? createdAt,
-    this.tags = const [],
   }) : createdAt = createdAt ?? DateTime.now();
 
-  factory BarberService.fromFirestore(DocumentSnapshot doc) {
+  factory ServiceCombo.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    return BarberService(
+    return ServiceCombo(
       id: doc.id,
       name: data['name'],
       description: data['description'],
-      price: (data['price'] as num).toDouble(),
-      duration: data['duration'],
-      category: data['category'] ?? 'hair',
+      totalPrice: (data['totalPrice'] as num).toDouble(),
+      discount: (data['discount'] as num).toDouble(),
+      totalDuration: data['totalDuration'],
+      serviceIds: List<String>.from(data['serviceIds']),
       imageUrl: data['imageUrl'],
       isActive: data['isActive'] ?? true,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
-      tags: List<String>.from(data['tags'] ?? []),
     );
   }
 
@@ -45,37 +45,37 @@ class BarberService {
     return {
       'name': name,
       'description': description,
-      'price': price,
-      'duration': duration,
-      'category': category,
+      'totalPrice': totalPrice,
+      'discount': discount,
+      'totalDuration': totalDuration,
+      'serviceIds': serviceIds,
       'imageUrl': imageUrl,
       'isActive': isActive,
       'createdAt': createdAt,
-      'tags': tags,
     };
   }
 
-  BarberService copyWith({
+  ServiceCombo copyWith({
     String? name,
     String? description,
-    double? price,
-    int? duration,
-    String? category,
+    double? totalPrice,
+    double? discount,
+    int? totalDuration,
+    List<String>? serviceIds,
     String? imageUrl,
     bool? isActive,
-    List<String>? tags,
   }) {
-    return BarberService(
+    return ServiceCombo(
       id: id,
       name: name ?? this.name,
       description: description ?? this.description,
-      price: price ?? this.price,
-      duration: duration ?? this.duration,
-      category: category ?? this.category,
+      totalPrice: totalPrice ?? this.totalPrice,
+      discount: discount ?? this.discount,
+      totalDuration: totalDuration ?? this.totalDuration,
+      serviceIds: serviceIds ?? this.serviceIds,
       imageUrl: imageUrl ?? this.imageUrl,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt,
-      tags: tags ?? this.tags,
     );
   }
 }

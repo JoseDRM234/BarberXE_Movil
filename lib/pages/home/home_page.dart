@@ -1,6 +1,8 @@
-import 'package:barber_xe/controllers/home_controller.dart';
+import 'package:barber_xe/controllers/services_controller.dart';
+import 'package:barber_xe/models/service_model.dart';
 import 'package:barber_xe/pages/widget/combo_card.dart';
 import 'package:barber_xe/pages/widget/service_card.dart';
+import 'package:barber_xe/pages/widget/service_management_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -67,7 +69,8 @@ class _HomeContentState extends State<_HomeContent> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<HomeController>(context, listen: false).loadServices();
+      // Llamar al método para cargar los servicios y combos
+      Provider.of<ServiceController>(context, listen: false).loadServicesAndCombos();
     });
   }
 
@@ -79,24 +82,24 @@ class _HomeContentState extends State<_HomeContent> {
 
   @override
   Widget build(BuildContext context) {
-    final homeController = Provider.of<HomeController>(context);
+    final serviceController = Provider.of<ServiceController>(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSearchBar(homeController),
+          _buildSearchBar(serviceController),
           const SizedBox(height: 20),
-          _buildCombosSection(homeController, context),
+          _buildCombosSection(serviceController, context),
           const SizedBox(height: 30),
-          _buildServicesSection(homeController, context),
+          _buildServicesSection(serviceController, context),
         ],
       ),
     );
   }
 
-  Widget _buildSearchBar(HomeController homeController) {
+  Widget _buildSearchBar(ServiceController serviceController) {
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
@@ -110,12 +113,47 @@ class _HomeContentState extends State<_HomeContent> {
         fillColor: Colors.grey[200],
         contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       ),
-      onChanged: (value) => homeController.setSearchQuery(value),
+      onChanged: (value) => serviceController.setSearchQuery(value),
     );
   }
 
-  Widget _buildCombosSection(HomeController homeController, BuildContext context) {
-    if (homeController.isLoading) {
+  void _showAddServiceDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: const ServiceManagementDialog(),
+      ),
+    );
+  }
+
+  void _showAddComboDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: ServiceManagementDialog(
+          serviceToEdit: BarberService(
+            id: '',
+            name: '',
+            description: '',
+            price: 0,
+            duration: 0,
+            category: 'Combo',
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCombosSection(ServiceController serviceController, BuildContext context) {
+    if (serviceController.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -134,11 +172,8 @@ class _HomeContentState extends State<_HomeContent> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.add_circle_outline, 
-                color: Colors.black),
-              onPressed: () {
-                Navigator.pushNamed(context, '/add-combo');
-              },
+              icon: const Icon(Icons.add_circle_outline, color: Colors.black),
+              onPressed: () => _showAddComboDialog(context),
             ),
           ],
         ),
@@ -147,11 +182,11 @@ class _HomeContentState extends State<_HomeContent> {
           height: 220,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: homeController.combos.length,
+            itemCount: serviceController.combos.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
-              final combo = homeController.combos[index];
-              return ComboCard(service: combo);
+              final combo = serviceController.combos[index];
+              return ComboCard(combo: combo);
             },
           ),
         ),
@@ -159,8 +194,8 @@ class _HomeContentState extends State<_HomeContent> {
     );
   }
 
-  Widget _buildServicesSection(HomeController homeController, BuildContext context) {
-    if (homeController.isLoading) {
+  Widget _buildServicesSection(ServiceController serviceController, BuildContext context) {
+    if (serviceController.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -179,11 +214,8 @@ class _HomeContentState extends State<_HomeContent> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.add_circle_outline, 
-                color: Colors.black),
-              onPressed: () {
-                Navigator.pushNamed(context, '/add-service');
-              },
+              icon: const Icon(Icons.add_circle_outline, color: Colors.black),
+              onPressed: () => _showAddServiceDialog(context),
             ),
           ],
         ),
@@ -191,10 +223,10 @@ class _HomeContentState extends State<_HomeContent> {
         ListView.separated(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
-          itemCount: homeController.services.length,
+          itemCount: serviceController.services.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final service = homeController.services[index];
+            final service = serviceController.services[index];
             return ServiceCard(service: service);
           },
         ),

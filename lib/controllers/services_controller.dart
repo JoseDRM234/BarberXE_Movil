@@ -1,82 +1,147 @@
-
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:barber_xe/models/service_model.dart';
+import 'package:barber_xe/models/service_combo.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:barber_xe/services/firestore_service.dart';
 
 class ServiceController with ChangeNotifier {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
-  List<Service> _services = [];
-  List<Service> _combos = [];
+  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  List<BarberService> _services = [];
+  List<ServiceCombo> _combos = [];
   bool _isLoading = true;
   String _searchQuery = '';
 
-  List<Service> get services => _searchQuery.isEmpty 
-      ? _services 
-      : _services.where((s) => s.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-
-  List<Service> get combos => _searchQuery.isEmpty 
-      ? _combos 
-      : _combos.where((c) => c.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-
+  List<BarberService> get services => _filterItems(_services);
+  List<ServiceCombo> get combos => _filterItems(_combos);
   bool get isLoading => _isLoading;
 
-  Future<void> loadServices() async {
+  List<T> _filterItems<T>(List<T> items) {
+    if (_searchQuery.isEmpty) return items;
+    return items.where((item) {
+      final name = (item is BarberService) 
+          ? item.name 
+          : (item as ServiceCombo).name;
+      return name.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+  }
+
+  
+
+  Future<void> loadServicesAndCombos() async {
+    _isLoading = true;
+    notifyListeners();
     try {
-      _isLoading = true;
-      notifyListeners();
-
-      final snapshot = await _firestore
-          .collection('services')
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      _services = snapshot.docs.map((doc) => Service.fromFirestore(doc, null)).toList();
-      
-      // Separar combos y servicios individuales
-      _combos = _services.where((s) => s.isCombo).toList();
-      _services = _services.where((s) => !s.isCombo).toList();
-
+      _services = await _firestoreService.fetchServices();
+      _combos = await _firestoreService.fetchCombos();
+    } finally {
       _isLoading = false;
       notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      rethrow;
     }
   }
 
-  Future<void> addService(Service service) async {
-    try {
-      await _firestore.collection('services').add(service.toFirestore());
-      await loadServices();
-    } catch (e) {
-      throw Exception('Error al agregar servicio: $e');
-    }
+  Future<void> addService(BarberService service) async {
+    await _firestoreService.addService(service.toFirestore());
+    await loadServicesAndCombos();
   }
 
-  Future<void> updateService(Service service) async {
-    try {
-      await _firestore
-          .collection('services')
-          .doc(service.id)
-          .update(service.toFirestore());
-      await loadServices();
-    } catch (e) {
-      throw Exception('Error al actualizar servicio: $e');
-    }
+  Future<void> updateService(BarberService service) async {
+    await _firestoreService.updateService(service.id, service.toFirestore());
+    await loadServicesAndCombos();
   }
 
-  Future<void> deleteService(String serviceId) async {
-    try {
-      await _firestore
-          .collection('services')
-          .doc(serviceId)
-          .update({'isActive': false});
-      await loadServices();
-    } catch (e) {
-      throw Exception('Error al eliminar servicio: $e');
-    }
+  Future<void> toggleServiceState(String id, bool isActive) async {
+    await _firestoreService.toggleServiceState(id, isActive);
+    await loadServicesAndCombos();
+  }
+
+  Future<List<BarberService>> getServicesForCombo(ServiceCombo combo) async {
+  try {
+    // Validamos que haya IDs
+    if (combo.serviceIds == null || combo.serviceIds!.isEmpty) return [];
+
+    // Obtener documentos desde Firestore
+    final docs = await _firestoreService.getServicesByIds(combo.serviceIds!);
+
+    // Convertirlos en objetos BarberService
+    return docs
+        .where((doc) => doc.exists)
+        .map((doc) => BarberService.fromFirestore(doc))
+        .toList();
+  } catch (e) {
+    debugPrint('Error obteniendo servicios del combo: $e');
+    return [];
+  }
+}
+
+Future<List<DocumentSnapshot>> getServicesByFilter(Map<String, dynamic> filters) async {
+    CollectionReference servicesRef = _db.collection('services');
+    Query query = servicesRef;
+
+    filters.forEach((key, value) {
+      query = query.where(key, isEqualTo: value);
+    });
+
+    final querySnapshot = await query.get();
+    return querySnapshot.docs;
+  }
+
+  Future<void> addCombo({
+    required String name,
+    required String description,
+    required List<String> serviceIds,
+    required double discount,
+    String? imageUrl,
+  }) async {
+    final serviceDocs = await _firestoreService.getServicesByIds(serviceIds);
+    final validDocs = serviceDocs.where((d) => d.exists).toList();
+    if (validDocs.isEmpty) throw Exception('No hay servicios válidos');
+
+      final totalPrice = validDocs.fold<double>(0, (sum, doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return sum + (data['price'] as num).toDouble();
+      });
+
+      final totalDuration = validDocs.fold<int>(0, (sum, doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return sum + (data['duration'] as num).toInt();
+      });
+
+    await _firestoreService.addCombo({
+      'name': name,
+      'description': description,
+      'totalPrice': totalPrice - discount,
+      'discount': discount,
+      'totalDuration': totalDuration,
+      'serviceIds': serviceIds,
+      'imageUrl': imageUrl,
+      'isActive': true,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await loadServicesAndCombos();
+  }
+
+  Future<void> updateCombo(ServiceCombo combo) async {
+    await _firestoreService.updateCombo(combo.id, combo.toFirestore());
+    await loadServicesAndCombos();
+  }
+
+  Future<void> deleteService(String id) async {
+    await _firestoreService.deleteService(id);
+    await loadServicesAndCombos();
+  }
+
+  // Nueva función para eliminar un combo
+  Future<void> deleteCombo(String id) async {
+    await _firestoreService.deleteCombo(id);
+    await loadServicesAndCombos();
+  }
+
+  Future<void> toggleComboState(String id, bool isActive) async {
+    await _firestoreService.toggleComboState(id, isActive);
+    await loadServicesAndCombos();
   }
 
   void setSearchQuery(String query) {

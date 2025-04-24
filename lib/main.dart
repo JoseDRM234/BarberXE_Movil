@@ -47,11 +47,6 @@ void main() async {
               userService: context.read<UserService>(),
             ),
           ),
-          ChangeNotifierProvider(
-            create: (context) => HomeController(
-              userService: context.read<UserService>(),
-            ),
-          ),
           ChangeNotifierProvider(create: (_) => ServiceController()),
         ],
         child: const MyApp(),
@@ -222,11 +217,11 @@ class _AppInitializerState extends State<_AppInitializer> {
       
       if (_disposed) return;
 
-      final homeController = Provider.of<HomeController>(
+      final serviceController = Provider.of<ServiceController>(
         AppRouter.navigatorKey.currentContext!,
         listen: false,
       );
-      await homeController.loadServices();
+      await serviceController.loadServicesAndCombos();
     } catch (e) {
       debugPrint('Error initializing app: $e');
       if (!_disposed && AppRouter.navigatorKey.currentState?.mounted == true) {

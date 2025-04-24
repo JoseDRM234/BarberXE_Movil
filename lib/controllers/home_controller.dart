@@ -1,4 +1,4 @@
-import 'package:barber_xe/models/service_model.dart';
+/*import 'package:barber_xe/models/service_model.dart';
 import 'package:barber_xe/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -51,4 +51,4 @@ class HomeController with ChangeNotifier {
     _searchQuery = query;
     notifyListeners();
   }
-}
+}*/

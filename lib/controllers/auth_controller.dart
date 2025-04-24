@@ -1,8 +1,11 @@
+import 'package:barber_xe/controllers/profile_controller.dart';
 import 'package:barber_xe/models/user_model.dart';
+import 'package:barber_xe/pages/home/home_page.dart';
 import 'package:barber_xe/routes/app_routes.dart';
 import 'package:barber_xe/routes/route_names.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 
