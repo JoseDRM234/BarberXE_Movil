@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
-
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
@@ -17,7 +16,6 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    // Cargar el perfil automáticamente al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final controller = Provider.of<ProfileController>(context, listen: false);
       controller.loadCurrentUser();
@@ -26,17 +24,21 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Provider.of<ProfileController>(context);
-
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi Perfil'),
+        centerTitle: true,
+        backgroundColor: Colors.black, // AppBar en color negro
+        foregroundColor: Colors.white, // Iconos y texto en blanco
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar sesión',
             onPressed: () async {
+              final controller = Provider.of<ProfileController>(context, listen: false);
               await controller.logout();
-              // Forzar recarga completa
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const AuthChecker()),
@@ -53,19 +55,24 @@ class _ProfilePageState extends State<ProfilePage> {
           }
           
           if (controller.currentUser == null) {
-            return const Center(
-              child: Text('No se pudo cargar el perfil'),
+            return Center(
+              child: Text(
+                'No se pudo cargar el perfil',
+                style: theme.textTheme.bodyLarge,
+              ),
             );
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
                 const ProfileHeader(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 ProfileForm(formKey: GlobalKey<FormState>()),
                 if (controller.isAdmin) const AdminPanel(),
+                const SizedBox(height: 20),
+                _buildEditSaveButton(controller, context),
               ],
             ),
           );
@@ -73,4 +80,36 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
+ Widget _buildEditSaveButton(ProfileController controller, BuildContext context) {
+  final theme = Theme.of(context);
+
+  if (controller.isEditing) {
+    // No mostramos el botón cuando está en modo edición
+    return const SizedBox.shrink();
+  }
+
+  // Mostrar solo el botón "EDITAR PERFIL"
+  return FilledButton(
+    onPressed: () {
+      controller.toggleEditMode(); // Cambia a modo edición
+    },
+    style: FilledButton.styleFrom(
+      backgroundColor: Colors.grey[800],
+      minimumSize: const Size(double.infinity, 50),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+    child: Text(
+      'EDITAR PERFIL',
+      style: theme.textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.2,
+        color: Colors.white,
+      ),
+    ),
+  );
+}
+
 }

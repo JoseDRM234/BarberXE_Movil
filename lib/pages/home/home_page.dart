@@ -24,7 +24,7 @@ class HomePage extends StatelessWidget {
 
   static BottomNavigationBar _buildBottomNavBar(BuildContext context) {
     return BottomNavigationBar(
-      backgroundColor: const Color.fromARGB(255, 213, 210, 210),
+      backgroundColor: const Color.fromARGB(255, 244, 241, 241),
       selectedItemColor: const Color.fromARGB(255, 0, 0, 0),
       unselectedItemColor: const Color.fromARGB(255, 0, 0, 0),
       currentIndex: 0,
