@@ -162,10 +162,10 @@ class _ServiceManagementDialogState extends State<ServiceManagementDialog> {
         ),
         ElevatedButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.grey,
           ),
+          child: const Text('Cancelar'),
         ),
       ],
     );

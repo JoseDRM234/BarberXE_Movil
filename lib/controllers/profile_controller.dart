@@ -18,7 +18,7 @@ class ProfileController with ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   bool _isEditing = false;
-  bool _isDisposed = false;
+  final bool _isDisposed = false;
   
   // Getters
   UserModel? get currentUser => _currentUser;
