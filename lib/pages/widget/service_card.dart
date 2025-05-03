@@ -6,12 +6,12 @@ import 'package:barber_xe/models/service_model.dart';
 
 class ServiceCard extends StatelessWidget {
   final BarberService service;
-  final VoidCallback? onEdit; // Parámetro añadido
+  final VoidCallback? onEdit;
 
   const ServiceCard({
     super.key, 
     required this.service,
-    this.onEdit, // Añadir al constructor
+    this.onEdit,
   });
 
   @override
@@ -20,6 +20,17 @@ class ServiceCard extends StatelessWidget {
     
     return Card(
       child: ListTile(
+        leading: service.imageUrl != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  service.imageUrl!,
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : const Icon(Icons.cut),
         title: Text(service.name),
         subtitle: Text(service.description),
         trailing: Column(
@@ -34,29 +45,29 @@ class ServiceCard extends StatelessWidget {
   }
 
   Widget _buildAdminActions(BuildContext context) {
-  return Container(
-    constraints: const BoxConstraints(maxHeight: 40), // Altura máxima
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.edit),
-          iconSize: 18, // Tamaño reducido
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          onPressed: onEdit,
-        ),
-        IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
-          iconSize: 18, // Tamaño reducido
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          onPressed: () => _deleteService(context),
-        ),
-      ],
-    ),
-  );
-}
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 40),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            iconSize: 18,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            onPressed: onEdit,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            iconSize: 18,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            onPressed: () => _deleteService(context),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _deleteService(BuildContext context) async {
     final confirmed = await showDialog<bool>( 
