@@ -127,7 +127,7 @@ class AppointmentController with ChangeNotifier {
       final docRef = await _db.collection('appointments').add(appointment.toMap());
       return docRef.id;
     } on AppointmentException catch (e) {
-      throw e;
+      rethrow;
     } catch (e) {
       throw AppointmentException('Error al crear la cita: $e');
     }

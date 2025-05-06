@@ -113,7 +113,7 @@ class _AppointmentContentState extends State<_AppointmentContent> {
                 appointmentController.removeService(service.id);
               }
             },
-          )).toList(),
+          )),
       ],
     );
   }
@@ -141,7 +141,7 @@ class _AppointmentContentState extends State<_AppointmentContent> {
                 appointmentController.removeCombo(combo.id);
               }
             },
-          )).toList(),
+          )),
       ],
     );
   }
@@ -376,7 +376,7 @@ class _AppointmentContentState extends State<_AppointmentContent> {
               ...appointmentController.selectedServiceIds.map((id) {
                 final service = serviceController.services.firstWhere((s) => s.id == id);
                 return _buildCostRow(service.name, '\$${service.price.toStringAsFixed(2)}');
-              }).toList(),
+              }),
               const SizedBox(height: 8),
             ],
             
@@ -385,7 +385,7 @@ class _AppointmentContentState extends State<_AppointmentContent> {
               ...appointmentController.selectedComboIds.map((id) {
                 final combo = serviceController.combos.firstWhere((c) => c.id == id);
                 return _buildCostRow(combo.name, '\$${combo.totalPrice.toStringAsFixed(2)}');
-              }).toList(),
+              }),
               const SizedBox(height: 8),
             ],
             
