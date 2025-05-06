@@ -11,6 +11,7 @@ class ServiceController with ChangeNotifier {
   List<BarberService> _services = [];
   List<ServiceCombo> _combos = [];
   bool _isLoading = true;
+  bool _isDisposed = false;
   String _searchQuery = '';
 
   List<BarberService> get services => _filterItems(_services);
@@ -36,7 +37,7 @@ class ServiceController with ChangeNotifier {
 
   Future<void> loadServicesAndCombos() async {
     _isLoading = true;
-    notifyListeners();
+    
     try {
       _services = await _firestoreService.fetchServices();
       _combos = await _firestoreService.fetchCombos();

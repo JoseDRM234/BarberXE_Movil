@@ -55,15 +55,26 @@ class _AppointmentContentState extends State<_AppointmentContent> {
   }
 
   Future<void> _loadInitialData() async {
-    final controller = Provider.of<AppointmentController>(context, listen: false);
-    final serviceController = Provider.of<ServiceController>(context, listen: false);
+    if (!mounted) return; // Verificar si el widget aún está montado
     
-    await serviceController.loadServicesAndCombos();
+    final controller = context.read<AppointmentController>();
+    final serviceController = context.read<ServiceController>();
     
-    // Establecer fecha por defecto (mañana a las 10 AM)
-    final tomorrow = DateTime.now().add(const Duration(days: 1));
-    controller.setSelectedDate(tomorrow);
-    controller.setSelectedTime(const TimeOfDay(hour: 10, minute: 0));
+    try {
+      await serviceController.loadServicesAndCombos();
+      
+      if (mounted) { // Verificar nuevamente antes de actualizar
+        final tomorrow = DateTime.now().add(const Duration(days: 1));
+        controller.setSelectedDate(tomorrow);
+        controller.setSelectedTime(const TimeOfDay(hour: 10, minute: 0));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   @override

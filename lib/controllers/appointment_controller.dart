@@ -27,9 +27,11 @@ class AppointmentController with ChangeNotifier {
   String _status = 'pending'; // 'pending', 'confirmed', 'cancelled', 'completed'
 
   void setSelectedDate(DateTime date) {
-    _selectedDate = date;
-    notifyListeners();
-  }
+  _selectedDate = date;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    notifyListeners(); // Notificar después del frame actual
+  });
+}
 
   void setSelectedTime(TimeOfDay time) {
     _selectedTime = time;
