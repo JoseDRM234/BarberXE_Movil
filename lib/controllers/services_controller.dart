@@ -11,7 +11,6 @@ class ServiceController with ChangeNotifier {
   List<BarberService> _services = [];
   List<ServiceCombo> _combos = [];
   bool _isLoading = true;
-  bool _isDisposed = false;
   String _searchQuery = '';
 
   List<BarberService> get services => _filterItems(_services);
