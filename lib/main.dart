@@ -133,17 +133,17 @@ class AuthChecker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-    final profileController = Provider.of<ProfileController>(context);
+    final authService = context.watch<AuthService>();
+    final profileController = context.read<ProfileController>();
 
-    return StreamBuilder<User?>(
-      stream: authService.authStateChanges,
-      builder: (context, authSnapshot) {
-        if (authSnapshot.connectionState == ConnectionState.waiting) {
+    return FutureBuilder<User?>(
+      future: authService.currentUserFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         
-        if (!authSnapshot.hasData || authSnapshot.data == null) {
+        if (!snapshot.hasData || snapshot.data == null) {
           return const LoginPage();
         }
 
@@ -154,10 +154,6 @@ class AuthChecker extends StatelessWidget {
               return const Scaffold(body: Center(child: CircularProgressIndicator()));
             }
             
-            if (profileSnapshot.hasError || profileController.currentUser == null) {
-              return const LoginPage();
-            }
-
             return const HomePage();
           },
         );
@@ -195,7 +191,7 @@ class _ProfileLoaderState extends State<_ProfileLoader> {
       }
     } catch (e) {
       debugPrint('Error loading profile: $e');
-      throw e;
+      rethrow;
     }
   }
 
