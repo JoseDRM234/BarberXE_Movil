@@ -1,3 +1,4 @@
+import 'package:barber_xe/controllers/profile_controller.dart';
 import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:barber_xe/pages/services/service_combo_page.dart';
 import 'package:barber_xe/pages/services/service_page.dart';
@@ -76,11 +77,13 @@ class _HomeContentState extends State<_HomeContent> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ServiceController>().loadServicesAndCombos();
+      context.read<ProfileController>().loadCurrentUser();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isAdmin = context.watch<ProfileController>().isAdmin;
     final serviceController = context.watch<ServiceController>();
 
     return RefreshIndicator(
@@ -91,9 +94,9 @@ class _HomeContentState extends State<_HomeContent> {
           children: [
             _buildSearchBar(serviceController),
             const SizedBox(height: 20),
-            _buildCombosSection(context),
+            _buildCombosSection(context, isAdmin),
             const SizedBox(height: 30),
-            _buildServicesSection(context),
+            _buildServicesSection(context, isAdmin),
           ],
         ),
       ),
@@ -118,45 +121,46 @@ class _HomeContentState extends State<_HomeContent> {
     );
   }
 
-  Widget _buildCombosSection(BuildContext context) {
-    final controller = context.watch<ServiceController>();
+  Widget _buildCombosSection(BuildContext context, bool isAdmin) {
+  final controller = context.watch<ServiceController>();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader(
-          title: 'Combos',
-          onAdd: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ServiceComboPage()),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 220,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: controller.combos.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              final combo = controller.combos[index];
-              return ComboCard(
-                combo: combo,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ServiceComboPage(combo: combo),
-                  ),
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSectionHeader(
+        title: 'Combos',
+        onAdd: isAdmin ? () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ServiceComboPage()),
+        ) : null,
+        isAdmin: isAdmin, // Pasar el estado de admin
+      ),
+      const SizedBox(height: 12),
+      SizedBox(
+        height: 220,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: controller.combos.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 16),
+          itemBuilder: (context, index) {
+            final combo = controller.combos[index];
+            return ComboCard(
+              combo: combo,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ServiceComboPage(combo: combo),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
-  Widget _buildServicesSection(BuildContext context) {
+  Widget _buildServicesSection(BuildContext context, bool isAdmin) {
     final controller = context.watch<ServiceController>();
 
     return Column(
@@ -164,10 +168,11 @@ class _HomeContentState extends State<_HomeContent> {
       children: [
         _buildSectionHeader(
           title: 'Servicios',
-          onAdd: () => Navigator.push(
+          onAdd: isAdmin ? () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const ServicePage()), // Página corregida
-          ),
+            MaterialPageRoute(builder: (_) => const ServicePage()),
+          ) : null,
+          isAdmin: isAdmin, // Pasar el estado de admin
         ),
         const SizedBox(height: 12),
         ListView.separated(
@@ -179,12 +184,12 @@ class _HomeContentState extends State<_HomeContent> {
             final service = controller.services[index];
             return ServiceCard(
               service: service,
-              onEdit: () => Navigator.push(
+              onEdit: isAdmin ? () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ServicePage(service: service), // Envía el servicio a editar
+                  builder: (_) => ServicePage(service: service),
                 ),
-              ),
+              ) : null,
             );
           },
         ),
@@ -192,7 +197,9 @@ class _HomeContentState extends State<_HomeContent> {
     );
   }
 
-  Widget _buildSectionHeader({required String title, VoidCallback? onAdd}) {
+  Widget _buildSectionHeader({required String title, VoidCallback? onAdd, required bool isAdmin}) {
+    final isAdmin = Provider.of<ProfileController>(context, listen: false).isAdmin;
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -203,10 +210,11 @@ class _HomeContentState extends State<_HomeContent> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.add_circle_outline),
-          onPressed: onAdd,
-        ),
+        if (isAdmin) // Solo muestra el botón si el usuario es admin
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            onPressed: onAdd,
+          ),
       ],
     );
   }
