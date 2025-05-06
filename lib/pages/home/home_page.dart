@@ -41,15 +41,19 @@ class HomePage extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.person), label: 'Perfil'),
       ],
-      onTap: (index) {
+      onTap: (index) async{
+        await Future.delayed(Duration.zero); // Permitir que el frame actual se complete
         switch (index) {
           case 0: break;
           case 1: 
-          Navigator.pushNamed(context, '/appointments');
-          break;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.pushNamed(context, '/appointments');
+            });
           case 2: break;
           case 3:
-            Navigator.pushNamed(context, '/profile');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.pushNamed(context, '/profile');
+            });
             break;
         }
       },
