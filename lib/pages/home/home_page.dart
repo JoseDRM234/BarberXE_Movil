@@ -44,7 +44,9 @@ class HomePage extends StatelessWidget {
       onTap: (index) {
         switch (index) {
           case 0: break;
-          case 1: break;
+          case 1: 
+          Navigator.pushNamed(context, '/appointments');
+          break;
           case 2: break;
           case 3:
             Navigator.pushNamed(context, '/profile');

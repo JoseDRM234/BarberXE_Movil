@@ -1,3 +1,4 @@
+import 'package:barber_xe/controllers/appointment_controller.dart';
 import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:barber_xe/firebase_options.dart';
 import 'package:barber_xe/pages/auth/login_page.dart';
@@ -6,6 +7,9 @@ import 'package:barber_xe/routes/app_routes.dart';
 import 'package:barber_xe/routes/route_names.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 
@@ -21,7 +25,9 @@ import 'controllers/auth_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  Intl.defaultLocale = 'es_ES';
+  await initializeDateFormatting('es_ES', null);
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -47,6 +53,7 @@ void main() async {
             ),
           ),
           ChangeNotifierProvider(create: (_) => ServiceController()),
+          ChangeNotifierProvider(create: (_) => AppointmentController()),
         ],
         child: const MyApp(),
       ),
@@ -70,6 +77,14 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'BarberXE',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es', 'ES'), // Español como idioma principal
+      ],
       theme: ThemeData(
         primarySwatch: Colors.brown,
         scaffoldBackgroundColor: Colors.grey[50],
@@ -118,19 +133,32 @@ class AuthChecker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthService>(
-      builder: (context, authService, _) {
-        return FutureBuilder<User?>(
-          future: authService.currentUserFuture,
-          builder: (context, authSnapshot) {
-            if (authSnapshot.connectionState == ConnectionState.waiting) {
+    final authService = Provider.of<AuthService>(context);
+    final profileController = Provider.of<ProfileController>(context);
+
+    return StreamBuilder<User?>(
+      stream: authService.authStateChanges,
+      builder: (context, authSnapshot) {
+        if (authSnapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        
+        if (!authSnapshot.hasData || authSnapshot.data == null) {
+          return const LoginPage();
+        }
+
+        return FutureBuilder<void>(
+          future: profileController.loadCurrentUser(),
+          builder: (context, profileSnapshot) {
+            if (profileSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(body: Center(child: CircularProgressIndicator()));
             }
-            if (authSnapshot.hasError || authSnapshot.data == null) {
+            
+            if (profileSnapshot.hasError || profileController.currentUser == null) {
               return const LoginPage();
             }
 
-            return _ProfileLoader(user: authSnapshot.data!);
+            return const HomePage();
           },
         );
       },
@@ -157,8 +185,18 @@ class _ProfileLoaderState extends State<_ProfileLoader> {
   }
 
   Future<void> _loadProfile() async {
-    final profileController = context.read<ProfileController>();
-    await profileController.loadCurrentUser();
+    try {
+      final profileController = context.read<ProfileController>();
+      await profileController.loadCurrentUser();
+      
+      // Verificar que el usuario se cargó correctamente
+      if (profileController.currentUser == null) {
+        throw Exception('No se pudo cargar el perfil del usuario');
+      }
+    } catch (e) {
+      debugPrint('Error loading profile: $e');
+      throw e;
+    }
   }
 
   @override
