@@ -40,6 +40,8 @@ class HomePage extends StatelessWidget {
           icon: Icon(Icons.home), label: 'Inicio'),
         BottomNavigationBarItem(
           icon: Icon(Icons.calendar_today), label: 'Citas'),
+          BottomNavigationBarItem(
+          icon: Icon(Icons.group), label: 'Barberos'),
         BottomNavigationBarItem(
           icon: Icon(Icons.notifications), label: 'Notificaciones'),
         BottomNavigationBarItem(
@@ -61,11 +63,16 @@ class HomePage extends StatelessWidget {
             });
             break;
           case 2:
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.pushNamed(context, '/barbers');
+              });
             break;
           case 3:
+            break;
+          case 4:
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.pushNamed(context, '/profile');
-            });
+                Navigator.pushNamed(context, '/profile');
+              });
             break;
         }
       },

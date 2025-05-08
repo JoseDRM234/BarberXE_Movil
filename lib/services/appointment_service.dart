@@ -105,6 +105,14 @@ class AppointmentService {
 
     final barberData = barberDoc.data()!;
 
+    // Verificar día laborable CORREGIDO
+    final originalDay = dateTime.weekday;
+    debugPrint('Original weekday: ${dateTime.weekday}');
+
+    if (!barberData['workingDays'].contains(originalDay)) {
+      debugPrint('Barber does not work on this day');
+      return false;
+    }
 
 
     if (!barberData.containsKey('workingHours') ||
