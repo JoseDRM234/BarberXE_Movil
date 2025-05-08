@@ -10,11 +10,17 @@ class ServiceController with ChangeNotifier {
 
   List<BarberService> _services = [];
   List<ServiceCombo> _combos = [];
+  List<BarberService> _allServices = [];
+  List<BarberService> _filteredServices = [];
+
   bool _isLoading = true;
   String _searchQuery = '';
+  String? _currentCategory;
+  String? _currentSort;
 
-  List<BarberService> get services => _filterItems(_services);
+  
   List<ServiceCombo> get combos => _filterItems(_combos);
+  List<BarberService> get services => _filteredServices;
   bool get isLoading => _isLoading;
 
   List<T> _filterItems<T>(List<T> items) {
@@ -27,6 +33,59 @@ class ServiceController with ChangeNotifier {
     }).toList();
   }
 
+  List<String> get categories => _allServices
+      .map((s) => s.category)
+      .toSet()
+      .toList();
+
+  void filterByCategory(String? category) {
+    _currentCategory = category == 'Todas' ? null : category;
+    _applyFilters();
+  }
+
+  void setCategoryFilter(String? category) {
+    _currentCategory = category;
+    _applyFilters();
+  }
+
+  void setSorting(String? sortBy) {
+    _currentSort = sortBy;
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    // Aplicar filtro de categoría
+    _filteredServices = _services.where((service) {
+      if (_currentCategory != null && service.category != _currentCategory) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    // Aplicar ordenamiento
+    if (_currentSort != null) {
+      switch (_currentSort) {
+        case 'price_asc':
+          _filteredServices.sort((a, b) => a.price.compareTo(b.price));
+          break;
+        case 'price_desc':
+          _filteredServices.sort((a, b) => b.price.compareTo(a.price));
+          break;
+        case 'duration_asc':
+          _filteredServices.sort((a, b) => a.duration.compareTo(b.duration));
+          break;
+        case 'duration_desc':
+          _filteredServices.sort((a, b) => b.duration.compareTo(a.duration));
+          break;
+        default:
+          // Orden por defecto (tal vez por nombre)
+          _filteredServices.sort((a, b) => a.name.compareTo(b.name));
+      }
+    }
+
+    notifyListeners();
+  }
+
   Future<List<BarberService>> getAvailableServices() async {
     if (_services.isEmpty) {
       await loadServicesAndCombos();
@@ -34,12 +93,17 @@ class ServiceController with ChangeNotifier {
     return _services.where((service) => service.isActive).toList();
   }
 
+  
+
   Future<void> loadServicesAndCombos() async {
     _isLoading = true;
     
     try {
+      
       _services = await _firestoreService.fetchServices();
       _combos = await _firestoreService.fetchCombos();
+      _filteredServices = List.from(_services); // Copia inicial
+      _applyFilters();
     } finally {
       _isLoading = false;
       notifyListeners();

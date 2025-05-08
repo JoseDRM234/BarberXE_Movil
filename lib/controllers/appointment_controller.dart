@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:barber_xe/models/appointment_model.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
 
 class AppointmentController with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -353,6 +352,27 @@ class AppointmentController with ChangeNotifier {
       );
       return combo.name;
     }).toList();
+  }
+
+  void addMultipleServices(List<String> serviceIds) {
+    _selectedServiceIds.clear();
+    _selectedServiceIds.addAll(serviceIds);
+    notifyListeners();
+  }
+
+  void addMultipleCombos(List<String> comboIds) {
+    _selectedComboIds.addAll(comboIds);
+    notifyListeners();
+  }
+
+  void clearServices() {
+    _selectedServiceIds.clear();
+    notifyListeners();
+  }
+
+  void clearCombos() {
+    _selectedComboIds.clear();
+    notifyListeners();
   }
 }
 
