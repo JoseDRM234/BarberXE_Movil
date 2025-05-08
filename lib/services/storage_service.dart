@@ -31,6 +31,10 @@ class StorageService {
       return uploadImage(imageFile, folder: 'combos_images'); // ✅ Usa el método correcto
   }
 
+    Future<String?> uploadBarberImage(dynamic imageFile) async {
+      return uploadImage(imageFile, folder: 'barber_images'); // ✅ Usa el método correcto
+  }
+
   Future<String?> uploadImage(dynamic imageFile, {String? folder}) async {
     try {
       final ref = _storage.ref().child(
