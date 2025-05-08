@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 
 class UserService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseAuth auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   CollectionReference get _users => _firestore.collection('users');

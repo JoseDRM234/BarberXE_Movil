@@ -98,19 +98,19 @@ class _CreateServiceFormState extends State<CreateServiceForm> {
       );
 
       // Puedes limpiar el formulario o navegar a otra pantalla después de guardar
-       _formKey.currentState?.reset();
-       _nameController.clear();
-       _descriptionController.clear();
-       _durationController.clear();
-       _priceController.clear();
-       setState(() {
-         _selectedCategory = null;
-         _selectedImage = null;
-       });
+        _formKey.currentState?.reset();
+        _nameController.clear();
+        _descriptionController.clear();
+        _durationController.clear();
+        _priceController.clear();
+        setState(() {
+          _selectedCategory = null;
+          _selectedImage = null;
+        });
       // Navigator.pop(context); // Ejemplo para cerrar la pantalla
     } else {
       // Muestra un mensaje si hay errores de validación
-       ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor, corrige los errores en el formulario.'),
           backgroundColor: Colors.orange,

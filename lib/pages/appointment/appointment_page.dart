@@ -1,3 +1,6 @@
+import 'package:barber_xe/pages/services/all_combos_page.dart';
+import 'package:barber_xe/pages/services/all_services_page.dart';
+import 'package:barber_xe/pages/widget/selectable_item_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -54,6 +57,24 @@ class _AppointmentContentState extends State<_AppointmentContent> {
     _loadInitialData();
   }
 
+  void _navigateToAllServices(BuildContext context, AppointmentController controller) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AllServicesPage(selectedIds: controller.selectedServiceIds),
+      ),
+    );
+  }
+
+  void _navigateToAllCombos(BuildContext context, AppointmentController controller) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AllCombosPage(selectedIds: controller.selectedComboIds),
+      ),
+    );
+  }
+
   Future<void> _loadInitialData() async {
     if (!mounted) return; // Verificar si el widget aún está montado
     
@@ -83,79 +104,150 @@ class _AppointmentContentState extends State<_AppointmentContent> {
     final appointmentController = Provider.of<AppointmentController>(context);
     final serviceController = Provider.of<ServiceController>(context);
     
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Column(
-        children: [
-          _buildServiceSelectionSection(serviceController, appointmentController),
-          _buildComboSelectionSection(serviceController, appointmentController),
-          _buildDateTimeSelectionSection(appointmentController),
-          _buildBarberSelection(),
-          _buildPaymentMethodCard(theme),
-          _buildCostSummaryCard(appointmentController, serviceController, theme),
-          _buildConfirmButton(appointmentController, theme),
-        ],
+    return Scaffold(
+      body: SingleChildScrollView( // Widget clave para evitar overflow
+        padding: const EdgeInsets.only(bottom: 20), // Espacio extra al final
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            _buildServiceSelectionSection(serviceController, appointmentController),            const SizedBox(height: 16),
+            _buildComboSelectionSection(serviceController, appointmentController),
+            const SizedBox(height: 16),
+            _buildDateTimeSelectionSection(appointmentController),
+            const SizedBox(height: 16),
+            _buildBarberSelection(),
+            const SizedBox(height: 16),
+            _buildPaymentMethodCard(theme),
+            const SizedBox(height: 16),
+            _buildCostSummaryCard(appointmentController, serviceController, theme),
+            const SizedBox(height: 16),
+            _buildConfirmButton(appointmentController, theme),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildServiceSelectionSection(
-      ServiceController serviceController, 
-      AppointmentController appointmentController) {
-    return ExpansionTile(
-      title: const Text('Servicios', style: TextStyle(fontWeight: FontWeight.bold)),
-      initiallyExpanded: true,
+  ServiceController serviceController,
+  AppointmentController appointmentController) {
+  
+  final displayedServices = serviceController.services.take(5).toList();
+  final hasMoreServices = serviceController.services.length > 5;
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Servicios Disponibles',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            if (hasMoreServices)
+              TextButton(
+                onPressed: () => _navigateToAllServices(context, appointmentController),
+                child: const Text('Ver más'),
+              ),
+          ],
+        ),
+      ),
+      SizedBox(
+        height: 170,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: displayedServices.length,
+          itemBuilder: (context, index) {
+            final service = displayedServices[index];
+            return SelectableItemCard(
+              title: service.name,
+              price: service.price,
+              duration: service.duration,
+              imageUrl: service.imageUrl,
+              isSelected: appointmentController.selectedServiceIds.contains(service.id),
+              onTap: () => _toggleServiceSelection(appointmentController, service.id),
+            );
+          },
+        ),
+      ),
+    ],
+  );
+}
+
+
+  Widget _buildComboSelectionSection(
+    ServiceController serviceController,
+    AppointmentController appointmentController) {
+    
+    final displayedCombos = serviceController.combos.take(5).toList();
+    final hasMoreCombos = serviceController.combos.length > 5;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (serviceController.services.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('No hay servicios disponibles'),
-          )
-        else
-          ...serviceController.services.map((service) => CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(service.name),
-            subtitle: Text('\$${service.price.toStringAsFixed(2)} - ${service.duration} min'),
-            value: appointmentController.selectedServiceIds.contains(service.id),
-            onChanged: (selected) {
-              if (selected == true) {
-                appointmentController.addService(service.id);
-              } else {
-                appointmentController.removeService(service.id);
-              }
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Combos Especiales',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              if (hasMoreCombos)
+                TextButton(
+                  onPressed: () => _navigateToAllCombos(context, appointmentController),
+                  child: const Text('Ver más'),
+                ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 220,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: displayedCombos.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (context, index) {
+              final combo = displayedCombos[index];
+              return SelectableItemCard(
+                isCombo: true,
+                title: combo.name,
+                price: combo.totalPrice,
+                duration: combo.totalDuration,
+                imageUrl: combo.imageUrl,
+                description: combo.description,
+                isSelected: appointmentController.selectedComboIds.contains(combo.id),
+                onTap: () => _toggleComboSelection(appointmentController, combo.id),
+              );
             },
-          )),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildComboSelectionSection(
-      ServiceController serviceController, 
-      AppointmentController appointmentController) {
-    return ExpansionTile(
-      title: const Text('Combos', style: TextStyle(fontWeight: FontWeight.bold)),
-      children: [
-        if (serviceController.combos.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('No hay combos disponibles'),
-          )
-        else
-          ...serviceController.combos.map((combo) => CheckboxListTile(
-            title: Text(combo.name),
-            subtitle: Text('\$${combo.totalPrice.toStringAsFixed(2)} - ${combo.totalDuration} min'),
-            value: appointmentController.selectedComboIds.contains(combo.id),
-            onChanged: (selected) {
-              if (selected == true) {
-                appointmentController.addCombo(combo.id);
-              } else {
-                appointmentController.removeCombo(combo.id);
-              }
-            },
-          )),
-      ],
-    );
+// Funciones auxiliares
+void _toggleServiceSelection(AppointmentController controller, String serviceId) {
+  if (controller.selectedServiceIds.contains(serviceId)) {
+    controller.removeService(serviceId);
+  } else {
+    controller.addService(serviceId);
   }
+}
+
+void _toggleComboSelection(AppointmentController controller, String comboId) {
+  if (controller.selectedComboIds.contains(comboId)) {
+    controller.removeCombo(comboId);
+  } else {
+    controller.addCombo(comboId);
+  }
+}
 
   Widget _buildDateTimeSelectionSection(AppointmentController controller) {
     return Card(

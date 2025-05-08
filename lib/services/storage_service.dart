@@ -2,11 +2,10 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:uuid/uuid.dart';
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final _uuid = const Uuid();
+  
 
   // Subir imagen genérica
   Future<String?> uploadServiceImage(dynamic imageFile) async {
