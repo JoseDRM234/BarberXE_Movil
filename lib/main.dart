@@ -53,7 +53,11 @@ void main() async {
             ),
           ),
           ChangeNotifierProvider(create: (_) => ServiceController()),
-          ChangeNotifierProvider(create: (_) => AppointmentController()),
+          ChangeNotifierProvider(
+            create: (context) => AppointmentController(
+              serviceController: context.read<ServiceController>(),
+            ),
+          ),
         ],
         child: const MyApp(),
       ),

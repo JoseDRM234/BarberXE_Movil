@@ -1,6 +1,7 @@
 import 'package:barber_xe/pages/services/all_combos_page.dart';
 import 'package:barber_xe/pages/services/all_services_page.dart';
 import 'package:barber_xe/pages/widget/selectable_item_card.dart';
+import 'package:barber_xe/services/appointment_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -22,18 +23,7 @@ class AppointmentPage extends StatefulWidget {
 class _AppointmentPageState extends State<AppointmentPage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reserva tu Cita'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: const _AppointmentContent(),
-    );
+    return const _AppointmentContent();
   }
 }
 
@@ -103,14 +93,16 @@ class _AppointmentContentState extends State<_AppointmentContent> {
     final theme = Theme.of(context);
     final appointmentController = Provider.of<AppointmentController>(context);
     final serviceController = Provider.of<ServiceController>(context);
-    
+    final totalPrice = appointmentController.calculateTotalPrice();
+
     return Scaffold(
-      body: SingleChildScrollView( // Widget clave para evitar overflow
-        padding: const EdgeInsets.only(bottom: 20), // Espacio extra al final
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 20),
         child: Column(
           children: [
             const SizedBox(height: 16),
-            _buildServiceSelectionSection(serviceController, appointmentController),            const SizedBox(height: 16),
+            _buildServiceSelectionSection(serviceController, appointmentController),
+            const SizedBox(height: 16),
             _buildComboSelectionSection(serviceController, appointmentController),
             const SizedBox(height: 16),
             _buildDateTimeSelectionSection(appointmentController),
@@ -119,7 +111,7 @@ class _AppointmentContentState extends State<_AppointmentContent> {
             const SizedBox(height: 16),
             _buildPaymentMethodCard(theme),
             const SizedBox(height: 16),
-            _buildCostSummaryCard(appointmentController, serviceController, theme),
+            _buildCostSummaryCard(appointmentController, serviceController, theme,totalPrice,),
             const SizedBox(height: 16),
             _buildConfirmButton(appointmentController, theme),
           ],
@@ -268,6 +260,8 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
     );
   }
 
+  
+
   Widget _buildDateSelector(AppointmentController controller) {
     return InkWell(
       onTap: () => _selectDate(context, controller),
@@ -297,31 +291,54 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Horarios disponibles'),
+        const Text('Seleccionar hora'),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _availableTimes.map((timeStr) {
-            final time = _parseTime(timeStr);
-            final isSelected = controller.selectedTime != null && 
-                controller.selectedTime!.hour == time.hour &&
-                controller.selectedTime!.minute == time.minute;
-                
-            return ChoiceChip(
-              label: Text(timeStr),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  controller.setSelectedTime(time);
-                }
+        ListTile(
+          title: Text(
+            controller.selectedTime != null
+                ? controller.selectedTime!.format(context)
+                : 'Seleccionar hora',
+          ),
+          leading: const Icon(Icons.access_time),
+          onTap: () async {
+            final time = await showTimePicker(
+              context: context,
+              initialTime: controller.selectedTime ?? const TimeOfDay(hour: 10, minute: 0),
+              builder: (BuildContext context, Widget? child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(
+                      primary: Colors.black,
+                      onPrimary: Colors.white,
+                      onSurface: Colors.black,
+                    ),
+                  ),
+                  child: child!,
+                );
               },
-              selectedColor: Theme.of(context).primaryColor,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
-              ),
             );
-          }).toList(),
+            
+            if (time != null && mounted) {
+              controller.setSelectedTime(time);
+              
+              // Validate the combined date and time isn't in the past
+              if (controller.selectedDate != null) {
+                final selectedDateTime = DateTime(
+                  controller.selectedDate!.year,
+                  controller.selectedDate!.month,
+                  controller.selectedDate!.day,
+                  time.hour,
+                  time.minute,
+                );
+                
+                if (selectedDateTime.isBefore(DateTime.now())) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No puedes agendar citas en el pasado')),
+                  );
+                }
+              }
+            }
+          },
         ),
       ],
     );
@@ -451,14 +468,11 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
   }
 
   Widget _buildCostSummaryCard(
-      AppointmentController appointmentController,
-      ServiceController serviceController,
-      ThemeData theme) {
-    final totalPrice = appointmentController.calculateTotalPrice(
-      serviceController.services,
-      serviceController.combos,
-    );
-    
+    AppointmentController appointmentController,
+    ServiceController serviceController,
+    ThemeData theme,
+    double totalPrice,
+  ) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
@@ -473,7 +487,6 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
               ),
             ),
             const SizedBox(height: 16),
-            
             if (appointmentController.selectedServiceIds.isNotEmpty) ...[
               const Text('Servicios:', style: TextStyle(fontWeight: FontWeight.w500)),
               ...appointmentController.selectedServiceIds.map((id) {
@@ -482,7 +495,6 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
               }),
               const SizedBox(height: 8),
             ],
-            
             if (appointmentController.selectedComboIds.isNotEmpty) ...[
               const Text('Combos:', style: TextStyle(fontWeight: FontWeight.w500)),
               ...appointmentController.selectedComboIds.map((id) {
@@ -491,7 +503,6 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
               }),
               const SizedBox(height: 8),
             ],
-            
             const Divider(),
             _buildCostRow('Subtotal', '\$${totalPrice.toStringAsFixed(2)}', isTotal: false),
             _buildCostRow('Total', '\$${totalPrice.toStringAsFixed(2)}', isTotal: true),
@@ -500,6 +511,7 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
       ),
     );
   }
+
 
   Widget _buildCostRow(String label, String value, {bool isTotal = false}) {
     return Padding(
@@ -589,34 +601,30 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
   }
 
   TimeOfDay _parseTime(String timeStr) {
-    try {
-      final timeRegex = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)?$', caseSensitive: false);
-      final match = timeRegex.firstMatch(timeStr.trim());
-      
-      if (match == null) throw const FormatException('Formato de hora inválido');
+    final timeRegex = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)?$', caseSensitive: false);
+    final match = timeRegex.firstMatch(timeStr.trim());
+    
+    if (match == null) throw const FormatException('Formato de hora inválido');
 
-      var hour = int.parse(match.group(1)!);
-      final minute = int.parse(match.group(2)!);
-      final period = match.group(3)?.toUpperCase();
+    var hour = int.parse(match.group(1)!);
+    final minute = int.parse(match.group(2)!);
+    final period = match.group(3)?.toUpperCase();
 
-      if (period == 'PM' && hour != 12) {
-        hour += 12;
-      } else if (period == 'AM' && hour == 12) {
-        hour = 0;
-      }
-
-      return TimeOfDay(hour: hour, minute: minute);
-    } catch (e) {
-      debugPrint('Error parsing time ($timeStr): $e');
-      return const TimeOfDay(hour: 9, minute: 0);
+    if (period == 'PM' && hour != 12) {
+      hour += 12;
+    } else if (period == 'AM' && hour == 12) {
+      hour = 0;
     }
+
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   Future<void> _confirmAppointment(AppointmentController controller) async {
     final profileController = Provider.of<ProfileController>(context, listen: false);
     final serviceController = Provider.of<ServiceController>(context, listen: false);
     
-    if (profileController.currentUser == null || profileController.currentUser?.uid.isEmpty == true) {
+    // Validaciones básicas
+    if (profileController.currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Debes iniciar sesión para agendar una cita')),
       );
@@ -645,6 +653,7 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
     }
 
     try {
+      // Crear DateTime de la cita - Ensuring proper time construction
       final appointmentDateTime = DateTime(
         controller.selectedDate!.year,
         controller.selectedDate!.month,
@@ -653,13 +662,41 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
         controller.selectedTime!.minute,
       );
 
+      // Debug log to check the constructed date and time
+      debugPrint('Creating appointment for: ${appointmentDateTime.toString()}');
+
+      // Verificar que no sea en el pasado
+      if (appointmentDateTime.isBefore(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No puedes agendar citas en el pasado')),
+        );
+        return;
+      }
+
+      // Get selected services and combos
+      final selectedServices = serviceController.services
+          .where((s) => controller.selectedServiceIds.contains(s.id))
+          .toList();
+      
+      final selectedCombos = serviceController.combos
+          .where((c) => controller.selectedComboIds.contains(c.id))
+          .toList();
+
+      // Calcular duración
+      final duration = AppointmentService.calculateTotalDuration(
+        selectedServices,
+        selectedCombos,
+      );
+
+      debugPrint('Checking availability for barber: ${controller.selectedBarberId}');
+      debugPrint('At time: ${appointmentDateTime.toString()}');
+      debugPrint('With duration: $duration minutes');
+
+      // Verificar disponibilidad
       final isAvailable = await controller.checkAvailability(
         barberId: controller.selectedBarberId!,
         dateTime: appointmentDateTime,
-        duration: controller.calculateTotalDuration(
-          serviceController.services,
-          serviceController.combos,
-        ),
+        duration: duration,
       );
 
       if (!isAvailable) {
@@ -669,26 +706,29 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
         return;
       }
 
-      // Obtener el nombre del barbero seleccionado
+      // Obtener nombre del barbero
       final barberDoc = await FirebaseFirestore.instance
           .collection('barbers')
           .doc(controller.selectedBarberId)
           .get();
       
-      final barberName = barberDoc['name']?.toString() ?? 'Barbero';
+      final barberName = barberDoc.exists 
+          ? barberDoc['name']?.toString() ?? 'Barbero'
+          : 'Barbero';
 
-      await controller.createAppointment(
-      userId: profileController.currentUser!.uid,
-      userName: profileController.currentUser!.fullName,
-      barberId: controller.selectedBarberId ?? '', // ID directo
-      barberName: controller.selectedBarberName ?? '', // Puedes obtenerlo de tu UI
-      services: serviceController.services
-          .where((s) => controller.selectedServiceIds.contains(s.id))
-          .toList(),
-      combos: serviceController.combos
-          .where((c) => controller.selectedComboIds.contains(c.id))
-          .toList(),
-    );
+      debugPrint('Creating appointment with barber: $barberName');
+
+      // Crear la cita
+      final appointmentId = await controller.createAppointment(
+        userId: profileController.currentUser!.uid,
+        userName: profileController.currentUser!.fullName,
+        barberId: controller.selectedBarberId!,
+        barberName: barberName,
+        services: selectedServices,
+        combos: selectedCombos,
+      );
+
+      debugPrint('Appointment created with ID: $appointmentId');
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cita confirmada exitosamente')),
@@ -696,6 +736,7 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
 
       Navigator.pop(context);
     } catch (e) {
+      debugPrint('Error creating appointment: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al confirmar cita: ${e.toString()}')),
       );
