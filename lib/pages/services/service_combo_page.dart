@@ -129,6 +129,8 @@ class _ServiceComboPageState extends State<ServiceComboPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.combo != null ? 'Editar Combo' : 'Nuevo Combo'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
         actions: [IconButton(icon: const Icon(Icons.save), onPressed: _saveCombo)],
       ),
       body: _buildFormContent(),
