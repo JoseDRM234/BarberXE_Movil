@@ -2,6 +2,7 @@ import 'package:barber_xe/models/service_model.dart';
 import 'package:barber_xe/pages/appointment/appointment_page.dart';
 import 'package:barber_xe/pages/auth/login_page.dart';
 import 'package:barber_xe/pages/auth/register_page.dart';
+import 'package:barber_xe/pages/barber/barber_pages.dart';
 import 'package:barber_xe/pages/home/home_page.dart';
 import 'package:barber_xe/pages/profile/profile_page.dart';
 import 'package:barber_xe/pages/services/service_page.dart';
@@ -17,6 +18,7 @@ class AppRouter {
   static const String profile = '/profile';
   static const String service = '/service';
   static const String appointments = '/appointments';
+  static const String barbers = '/barbers';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final authService = Provider.of<AuthService>(navigatorKey.currentContext!, listen: false);
@@ -47,6 +49,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const HomePage());
       case profile:
         return MaterialPageRoute(builder: (_) => const ProfilePage());
+      case barbers:
+        return MaterialPageRoute(builder: (_) => const BarbersPage());
       case service:
         final service = settings.arguments as BarberService?;
         return MaterialPageRoute(

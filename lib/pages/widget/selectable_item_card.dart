@@ -41,7 +41,7 @@ class SelectableItemCard extends StatelessWidget {
               width: isSelected ? 2 : 1,
             ),
           ),
-          child: Container(
+          child: SizedBox(
             height: isCombo ? 220 : 170,
             child: Stack(
               children: [

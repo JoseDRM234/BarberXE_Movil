@@ -10,7 +10,7 @@ class ServiceController with ChangeNotifier {
 
   List<BarberService> _services = [];
   List<ServiceCombo> _combos = [];
-  List<BarberService> _allServices = [];
+  final List<BarberService> _allServices = [];
   List<BarberService> _filteredServices = [];
 
   bool _isLoading = true;
@@ -18,7 +18,6 @@ class ServiceController with ChangeNotifier {
   String? _currentCategory;
   String? _currentSort;
 
-  
   List<ServiceCombo> get combos => _filterItems(_combos);
   List<BarberService> get services => _filteredServices;
   bool get isLoading => _isLoading;
@@ -93,13 +92,10 @@ class ServiceController with ChangeNotifier {
     return _services.where((service) => service.isActive).toList();
   }
 
-  
-
   Future<void> loadServicesAndCombos() async {
     _isLoading = true;
     
     try {
-      
       _services = await _firestoreService.fetchServices();
       _combos = await _firestoreService.fetchCombos();
       _filteredServices = List.from(_services); // Copia inicial
@@ -126,25 +122,25 @@ class ServiceController with ChangeNotifier {
   }
 
   Future<List<BarberService>> getServicesForCombo(ServiceCombo combo) async {
-  try {
-    // Validamos que haya IDs
-    if (combo.serviceIds.isEmpty) return [];
+    try {
+      // Validamos que haya IDs
+      if (combo.serviceIds.isEmpty) return [];
 
-    // Obtener documentos desde Firestore
-    final docs = await _firestoreService.getServicesByIds(combo.serviceIds);
+      // Obtener documentos desde Firestore
+      final docs = await _firestoreService.getServicesByIds(combo.serviceIds);
 
-    // Convertirlos en objetos BarberService
-    return docs
-        .where((doc) => doc.exists)
-        .map((doc) => BarberService.fromFirestore(doc))
-        .toList();
-  } catch (e) {
-    debugPrint('Error obteniendo servicios del combo: $e');
-    return [];
+      // Convertirlos en objetos BarberService
+      return docs
+          .where((doc) => doc.exists)
+          .map((doc) => BarberService.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      debugPrint('Error obteniendo servicios del combo: $e');
+      return [];
+    }
   }
-}
 
-Future<List<DocumentSnapshot>> getServicesByFilter(Map<String, dynamic> filters) async {
+  Future<List<DocumentSnapshot>> getServicesByFilter(Map<String, dynamic> filters) async {
     CollectionReference servicesRef = _db.collection('services');
     Query query = servicesRef;
 
@@ -157,14 +153,14 @@ Future<List<DocumentSnapshot>> getServicesByFilter(Map<String, dynamic> filters)
   }
 
   // En ServiceController
-Future<void> addCombo({
-  required String name,
-  required String description,
-  required List<String> serviceIds,
-  required double discount,
-  String? imageUrl,
-}) async {
-  try {
+  Future<void> addCombo({
+    required String name,
+    required String description,
+    required List<String> serviceIds,
+    required double discount,
+    String? imageUrl,
+  }) async {
+    try {
       // Obtener servicios actualizados
       final services = await _firestoreService.getServicesByIds(serviceIds);
       
@@ -242,5 +238,21 @@ Future<void> addCombo({
       await loadServicesAndCombos();
     }
     return _services.where((s) => s.isActive).toList();
+  }
+
+  double calculateTotalPrice(List<String> serviceIds, List<String> comboIds) {
+    double total = 0.0;
+    
+    for (var id in serviceIds) {
+      final service = services.firstWhere((s) => s.id == id);
+      total += service.price;
+    }
+    
+    for (var id in comboIds) {
+      final combo = combos.firstWhere((c) => c.id == id);
+      total += combo.totalPrice;
+    }
+    
+    return total;
   }
 }

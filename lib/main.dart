@@ -1,8 +1,10 @@
 import 'package:barber_xe/controllers/appointment_controller.dart';
+import 'package:barber_xe/controllers/barber_controller.dart';
 import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:barber_xe/firebase_options.dart';
 import 'package:barber_xe/pages/auth/login_page.dart';
 import 'package:barber_xe/pages/home/home_page.dart';
+import 'package:barber_xe/pages/services/barber_services.dart';
 import 'package:barber_xe/routes/app_routes.dart';
 import 'package:barber_xe/routes/route_names.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -39,6 +41,10 @@ void main() async {
           Provider(create: (_) => AuthService()),
           Provider(create: (_) => UserService()),
           Provider(create: (_) => StorageService()),
+          Provider(create: (_) => BarberService()),
+        ChangeNotifierProvider(create: (_) => BarberController(
+          barberService: BarberService(),
+        )),
           ChangeNotifierProvider(
             create: (context) => ProfileController(
               authService: context.read<AuthService>(),
@@ -53,7 +59,11 @@ void main() async {
             ),
           ),
           ChangeNotifierProvider(create: (_) => ServiceController()),
-          ChangeNotifierProvider(create: (_) => AppointmentController()),
+          ChangeNotifierProvider(
+            create: (context) => AppointmentController(
+              serviceController: context.read<ServiceController>(),
+            ),
+          ),
         ],
         child: const MyApp(),
       ),

@@ -1,6 +1,7 @@
 import 'package:barber_xe/controllers/profile_controller.dart';
 import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:barber_xe/models/service_combo.dart';
+import 'package:barber_xe/pages/appointment/appointments_dashboard_page.dart';
 import 'package:barber_xe/pages/services/service_combo_page.dart';
 import 'package:barber_xe/pages/services/service_page.dart';
 import 'package:barber_xe/pages/widget/home_helpers.dart';
@@ -39,24 +40,39 @@ class HomePage extends StatelessWidget {
           icon: Icon(Icons.home), label: 'Inicio'),
         BottomNavigationBarItem(
           icon: Icon(Icons.calendar_today), label: 'Citas'),
+          BottomNavigationBarItem(
+          icon: Icon(Icons.group), label: 'Barberos'),
         BottomNavigationBarItem(
           icon: Icon(Icons.notifications), label: 'Notificaciones'),
         BottomNavigationBarItem(
           icon: Icon(Icons.person), label: 'Perfil'),
       ],
-      onTap: (index) async{
-        await Future.delayed(Duration.zero); // Permitir que el frame actual se complete
+      onTap: (index) async {
+        await Future.delayed(Duration.zero);
         switch (index) {
-          case 0: break;
-          case 1: 
+          case 0:
+            break;
+          case 1:
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.pushNamed(context, '/appointments');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AppointmentsDashboardPage(),
+                ),
+              );
             });
-          case 2: break;
+            break;
+          case 2:
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.pushNamed(context, '/barbers');
+              });
+            break;
           case 3:
+            break;
+          case 4:
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.pushNamed(context, '/profile');
-            });
+                Navigator.pushNamed(context, '/profile');
+              });
             break;
         }
       },
@@ -302,7 +318,7 @@ class _HomeContentState extends State<_HomeContent> {
                     const SizedBox(height: 12),
                     
                     // Lista de servicios
-                    ...services.map((service) => HomeHelpers.buildServiceItem(service, theme)).toList(),
+                    ...services.map((service) => HomeHelpers.buildServiceItem(service, theme)),
                   ],
                 ),
               ),

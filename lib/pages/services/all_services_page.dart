@@ -103,7 +103,7 @@ class _AllServicesPageState extends State<AllServicesPage> {
                   value: category,
                   child: Text(category),
                 );
-              }).toList(),
+              }),
             ],
             onChanged: (value) {
               setState(() => _selectedCategory = value);

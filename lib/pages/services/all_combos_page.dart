@@ -17,8 +17,8 @@ class AllCombosPage extends StatefulWidget {
 class _AllCombosPageState extends State<AllCombosPage> {
   late List<String> _selectedIds;
   String? _selectedSort;
-  TextEditingController _priceController = TextEditingController();
-  TextEditingController _durationController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _durationController = TextEditingController();
   bool _filtersApplied = false;
   bool _showFilters = false;
 
@@ -211,7 +211,7 @@ class _AllCombosPageState extends State<AllCombosPage> {
                     value: value,
                     child: Text(text, style: theme.textTheme.bodyLarge),
                   );
-                }).toList(),
+                }),
               ],
               onChanged: (value) => setState(() => _selectedSort = value),
             ),
