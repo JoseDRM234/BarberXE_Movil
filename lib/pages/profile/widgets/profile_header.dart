@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart'; // Asegúrate de importar esto
 import '../../../controllers/profile_controller.dart';
 
 class ProfileHeader extends StatelessWidget {
@@ -74,7 +75,7 @@ class ProfileHeader extends StatelessWidget {
           const SizedBox(height: 24),
           Text(
             user?.fullName ?? 'Sin nombre',
-            style: const TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
@@ -84,7 +85,7 @@ class ProfileHeader extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             user?.email ?? '',
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 15,
               color: Colors.grey.shade600,
               letterSpacing: 0.1,

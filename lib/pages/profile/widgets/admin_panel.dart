@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // Asegúrate de importar esto
 
 class AdminPanel extends StatelessWidget {
   const AdminPanel({super.key});
@@ -28,9 +29,11 @@ class AdminPanel extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   'Panel de Administración',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.error,
+                  style: GoogleFonts.poppins(
+                    textStyle: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.error,
+                    ),
                   ),
                 ),
               ],
@@ -77,7 +80,10 @@ class AdminPanel extends StatelessWidget {
         children: [
           Icon(icon, size: 20),
           const SizedBox(width: 8),
-          Text(label),
+          Text(
+            label,
+            style: GoogleFonts.poppins(), // Fuente aplicada aquí también
+          ),
         ],
       ),
     );

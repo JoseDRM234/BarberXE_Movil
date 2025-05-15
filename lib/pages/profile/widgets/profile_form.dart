@@ -1,6 +1,7 @@
 import 'package:barber_xe/models/profile_data.dart';
 import 'package:barber_xe/models/user_model.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../controllers/profile_controller.dart';
 
@@ -96,21 +97,28 @@ class ProfileFormState extends State<ProfileForm> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
+        Text(
           'Información personal',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
             color: Colors.black87,
           ),
         ),
         if (isEditing)
           TextButton.icon(
-            icon: const Icon(Icons.save_rounded, size: 20, color: Colors.black),
-            label: const Text('Guardar', style: TextStyle(color: Colors.black)),
+            icon: Icon(Icons.save_rounded, size: 20, color: Colors.black),
+            label: Text(
+              'Guardar',
+              style: GoogleFonts.poppins(
+                color: Colors.black,
+                fontWeight: FontWeight.w500,
+                fontSize: 12
+              ),
+            ),
             style: TextButton.styleFrom(
               backgroundColor: Colors.grey.shade100,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -161,9 +169,9 @@ class ProfileFormState extends State<ProfileForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Cambiar contraseña',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 16,
             color: Colors.black87,
           ),
@@ -177,9 +185,9 @@ class ProfileFormState extends State<ProfileForm> {
           validator: (value) => _validatePasswordField(value),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Dejar en blanco para mantener la actual',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 12,
             color: Colors.grey,
           ),
@@ -202,10 +210,10 @@ class ProfileFormState extends State<ProfileForm> {
       enabled: enabled,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 15),
+      style: GoogleFonts.poppins(fontSize: 15),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
+        labelStyle: GoogleFonts.poppins(color: Colors.grey),
         prefixIcon: Icon(icon, size: 20, color: Colors.grey.shade600),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -223,6 +231,50 @@ class ProfileFormState extends State<ProfileForm> {
     );
   }
 
+  Future<bool> _handleWillPop(BuildContext context, ProfileController controller, bool isEditing) async {
+    if (isEditing) {
+      final shouldPop = await _showDiscardChangesDialog(context);
+      if (shouldPop) {
+        controller.toggleEditMode();
+      }
+      return false;
+    }
+    return true;
+  }
+
+  Future<bool> _showDiscardChangesDialog(BuildContext context) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Descartar cambios',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          '¿Estás seguro de que quieres descartar los cambios no guardados?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(
+              'Descartar',
+              style: GoogleFonts.poppins(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+  // Validators (unchanged)
   String? _validateRequiredField(String? value, bool isEditing) {
     if (isEditing && (value == null || value.isEmpty)) {
       return 'Este campo es requerido';
@@ -242,37 +294,6 @@ class ProfileFormState extends State<ProfileForm> {
       return 'Mínimo 6 caracteres';
     }
     return null;
-  }
-
-  Future<bool> _handleWillPop(BuildContext context, ProfileController controller, bool isEditing) async {
-    if (isEditing) {
-      final shouldPop = await _showDiscardChangesDialog(context);
-      if (shouldPop) {
-        controller.toggleEditMode();
-      }
-      return false;
-    }
-    return true;
-  }
-
-  Future<bool> _showDiscardChangesDialog(BuildContext context) async {
-    return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Descartar cambios', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('¿Estás seguro de que quieres descartar los cambios no guardados?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Descartar', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    ) ?? false;
   }
 
   @override

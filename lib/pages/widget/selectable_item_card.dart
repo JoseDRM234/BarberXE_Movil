@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SelectableItemCard extends StatelessWidget {
   final String title;
@@ -27,32 +28,36 @@ class SelectableItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+    final accentColor = theme.primaryColor;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: isCombo ? 200 : 140,
-        margin: const EdgeInsets.only(right: 12),
+        width: isCombo ? 200 : 140, // Tamaño original
+        margin: const EdgeInsets.only(right: 12), // Margen original
         child: Card(
+          elevation: 4,
+          shadowColor: Colors.black.withOpacity(0.1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(
-              color: isSelected ? theme.primaryColor : Colors.grey.shade300,
+              color: isSelected ? accentColor : Colors.grey.shade300,
               width: isSelected ? 2 : 1,
             ),
           ),
+          color: Colors.white,
           child: SizedBox(
-            height: isCombo ? 220 : 170,
+            height: isCombo ? 220 : 170, // Altura original
             child: Stack(
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildImageSection(),
-                    _buildContentSection(context),
+                    _buildImageSection(context),
+                    _buildContentSection(context, accentColor),
                   ],
                 ),
-                if (isSelected) _buildSelectionIndicator(theme),
+                if (isSelected) _buildSelectionIndicator(accentColor),
               ],
             ),
           ),
@@ -61,28 +66,52 @@ class SelectableItemCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImageSection() {
+  Widget _buildImageSection(BuildContext context) {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       child: Container(
-        height: isCombo ? 120 : 80,
-        color: Colors.grey.shade200,
-        child: imageUrl != null
-            ? Image.network(
+        height: isCombo ? 120 : 80, // Altura original de la imagen
+        color: Colors.grey.shade100,
+        child: Stack(
+          children: [
+            if (imageUrl != null)
+              Image.network(
                 imageUrl!,
                 fit: BoxFit.cover,
                 width: double.infinity,
+                errorBuilder: (_, __, ___) => _buildPlaceholderIcon(),
               )
-            : Icon(
-                isCombo ? Icons.album : Icons.cut,
-                size: isCombo ? 40 : 30,
-                color: Colors.grey,
+            else
+              _buildPlaceholderIcon(),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.2),
+                    Colors.transparent,
+                  ],
+                ),
               ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildContentSection(BuildContext context) {
+  Widget _buildPlaceholderIcon() {
+    return Center(
+      child: Icon(
+        isCombo ? Icons.album : Icons.cut,
+        size: isCombo ? 40 : 30, // Tamaño original del icono
+        color: Colors.grey.shade400,
+      ),
+    );
+  }
+
+  Widget _buildContentSection(BuildContext context, Color accentColor) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -95,9 +124,10 @@ class SelectableItemCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: isCombo ? 16 : 14,
+                  style: GoogleFonts.poppins(
+                    fontSize: isCombo ? 16 : 14, // Tamaño original
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -111,14 +141,14 @@ class SelectableItemCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(4),
+                        color: accentColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         description!,
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 10,
-                          color: Colors.blue[800],
+                          color: accentColor,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -126,9 +156,9 @@ class SelectableItemCard extends StatelessWidget {
                   else
                     Text(
                       description!,
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 12,
-                        color: Colors.grey,
+                        color: Colors.grey.shade700,
                       ),
                       maxLines: isCombo ? 2 : 1,
                       overflow: TextOverflow.ellipsis,
@@ -140,22 +170,23 @@ class SelectableItemCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  flex: 2, // Prioriza espacio para la duración
+                  flex: 2,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isCombo)
-                        const Icon(Icons.access_time, 
-                          size: 16, 
-                          color: Colors.grey,
+                        Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: Colors.grey.shade600,
                         ),
-                      if (isCombo) const SizedBox(width: 2), // Reducimos el espacio
+                      if (isCombo) const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          '${duration ~/ 60}h ${duration % 60}min', // Formato mejorado
-                          style: TextStyle(
-                            fontSize: 10, // Tamaño reducido
-                            color: Colors.grey,
+                          '${duration ~/ 60}h ${duration % 60}min',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            color: Colors.grey.shade600,
                           ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
@@ -165,36 +196,40 @@ class SelectableItemCard extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  flex: 1, // Espacio para el precio
+                  flex: 1,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
                       '\$${price.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: Theme.of(context).primaryColor,
+                      style: GoogleFonts.poppins(
+                        color: accentColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12, // Tamaño reducido
+                        fontSize: 12,
                       ),
                     ),
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSelectionIndicator(ThemeData theme) {
+  Widget _buildSelectionIndicator(Color accentColor) {
     return Positioned(
       top: 8,
       right: 8,
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: theme.primaryColor,
+          color: accentColor,
           shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white,
+            width: 2,
+          ),
         ),
         child: const Icon(
           Icons.check,

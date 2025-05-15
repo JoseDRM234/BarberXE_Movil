@@ -1,11 +1,11 @@
-// pages/barbers/barbers_page.dart
 import 'package:barber_xe/pages/barber/Barber_Form.dart';
-import 'package:barber_xe/pages/widget/barber_card.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:barber_xe/controllers/barber_controller.dart';
 import 'package:barber_xe/controllers/profile_controller.dart';
 import 'package:barber_xe/models/barber_model.dart';
+import 'package:barber_xe/pages/widget/barber_card.dart';
 
 class BarbersPage extends StatelessWidget {
   static const String routeName = '/barbers';
@@ -18,7 +18,13 @@ class BarbersPage extends StatelessWidget {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Barberos'),
+        title: Text(
+          'Barberos',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+          ),
+        ),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         actions: [
@@ -43,7 +49,12 @@ class BarbersPage extends StatelessWidget {
           final success = await controller.addBarber(newBarber);
           if (success && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Barbero agregado exitosamente')),
+              SnackBar(
+                content: Text(
+                  'Barbero agregado exitosamente',
+                  style: GoogleFonts.poppins(),
+                ),
+              ),
             );
           }
         },
@@ -74,15 +85,29 @@ class _BarberListState extends State<_BarberList> {
     final isAdmin = Provider.of<ProfileController>(context, listen: false).isAdmin;
 
     if (controller.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          color: Theme.of(context).primaryColor,
+        ),
+      );
     }
 
     if (controller.errorMessage.isNotEmpty) {
-      return Center(child: Text('Error: ${controller.errorMessage}'));
+      return Center(
+        child: Text(
+          'Error: ${controller.errorMessage}',
+          style: GoogleFonts.poppins(),
+        ),
+      );
     }
 
     if (controller.barbers.isEmpty) {
-      return const Center(child: Text('No hay barberos registrados'));
+      return Center(
+        child: Text(
+          'No hay barberos registrados',
+          style: GoogleFonts.poppins(),
+        ),
+      );
     }
 
     return RefreshIndicator(
@@ -93,21 +118,26 @@ class _BarberListState extends State<_BarberList> {
         itemBuilder: (context, index) {
           final barber = controller.barbers[index];
           return BarberCard(
-          barber: barber,
-          onRatingChanged: isAdmin 
-              ? null 
-              : (newRating) async {
-                final updatedBarber = barber.copyWith(rating: newRating);
-                final success = await controller.updateBarber(updatedBarber);
-                if (success && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Calificación actualizada a $newRating estrellas')),
-                  );
-                }
-              },
-          onEdit: isAdmin ? () => _showEditBarberDialog(context, barber) : null,
-          onDelete: isAdmin ? () => _confirmDeleteBarber(context, barber.id) : null,
-          readOnlyRating: isAdmin, // Admin ve las estrellas pero no puede cambiarlas
+            barber: barber,
+            onRatingChanged: isAdmin 
+                ? null 
+                : (newRating) async {
+                  final updatedBarber = barber.copyWith(rating: newRating);
+                  final success = await controller.updateBarber(updatedBarber);
+                  if (success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Calificación actualizada a $newRating estrellas',
+                          style: GoogleFonts.poppins(),
+                        ),
+                      ),
+                    );
+                  }
+                },
+            onEdit: isAdmin ? () => _showEditBarberDialog(context, barber) : null,
+            onDelete: isAdmin ? () => _confirmDeleteBarber(context, barber.id) : null,
+            readOnlyRating: isAdmin,
           );
         },
       ),
@@ -125,7 +155,12 @@ class _BarberListState extends State<_BarberList> {
           final success = await controller.updateBarber(updatedBarber);
           if (success && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Barbero actualizado exitosamente')),
+              SnackBar(
+                content: Text(
+                  'Barbero actualizado exitosamente',
+                  style: GoogleFonts.poppins(),
+                ),
+              ),
             );
           }
         },
@@ -137,16 +172,31 @@ class _BarberListState extends State<_BarberList> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: const Text('¿Estás seguro de eliminar este barbero?'),
+        title: Text(
+          'Confirmar eliminación',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          '¿Estás seguro de eliminar este barbero?',
+          style: GoogleFonts.poppins(),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.poppins(color: Colors.grey[700]),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Eliminar',
+              style: GoogleFonts.poppins(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -160,7 +210,12 @@ class _BarberListState extends State<_BarberList> {
 
       if (!success && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al eliminar el barbero')),
+          SnackBar(
+            content: Text(
+              'Error al eliminar el barbero',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
         );
       }
     }
