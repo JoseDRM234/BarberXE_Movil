@@ -8,6 +8,7 @@ import 'package:barber_xe/pages/widget/home_helpers.dart';
 import 'package:barber_xe/pages/widget/selectable_item_card.dart';
 import 'package:barber_xe/pages/widget/service_card.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 class HomePage extends StatelessWidget {
@@ -19,7 +20,13 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Barbería El Estilo'),
+        title: Text(
+          'Barbería El Estilo',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            fontSize: 25,
+          ),
+        ),
         backgroundColor: const Color.fromARGB(255, 10, 10, 10),
         automaticallyImplyLeading: false,
       ),
@@ -34,18 +41,22 @@ class HomePage extends StatelessWidget {
       selectedItemColor: const Color.fromARGB(255, 0, 0, 0),
       unselectedItemColor: const Color.fromARGB(255, 0, 0, 0),
       currentIndex: 0,
+      unselectedLabelStyle: GoogleFonts.poppins(
+        fontWeight: FontWeight.normal,
+        fontSize: 12,
+      ),
       type: BottomNavigationBarType.fixed,
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(Icons.home), label: 'Inicio'),
+          icon: Icon(Icons.home_outlined), label: 'Inicio'),
         BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_today), label: 'Citas'),
+          icon: Icon(Icons.calendar_today_outlined), label: 'Citas'),
           BottomNavigationBarItem(
-          icon: Icon(Icons.group), label: 'Barberos'),
+          icon: Icon(Icons.group_outlined), label: 'Barberos'),
         BottomNavigationBarItem(
-          icon: Icon(Icons.notifications), label: 'Notificaciones'),
+          icon: Icon(Icons.notifications_outlined), label: 'Notificaciones'),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person), label: 'Perfil'),
+          icon: Icon(Icons.person_outline), label: 'Perfil'),
       ],
       onTap: (index) async {
         await Future.delayed(Duration.zero);
@@ -123,23 +134,69 @@ class _HomeContentState extends State<_HomeContent> {
   }
   
 
-  Widget _buildSearchBar(ServiceController controller) {
-    return TextField(
+ Widget _buildSearchBar(ServiceController controller) {
+  return Container(
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(255, 255, 255, 255),
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 5,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: TextField(
       controller: _searchController,
       decoration: InputDecoration(
         hintText: 'Buscar...',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () {
-            _searchController.clear();
-            controller.setSearchQuery('');
-          },
+        hintStyle: TextStyle(
+          color: Colors.grey[400],
+          fontSize: 16,
         ),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Icon(
+            Icons.search,
+            color: Colors.grey[600],
+            size: 24,
+          ),
+        ),
+        suffixIcon: _searchController.text.isNotEmpty
+            ? IconButton(
+                padding: const EdgeInsets.only(right: 12),
+                icon: Icon(
+                  Icons.close,
+                  color: Colors.grey[600],
+                  size: 20,
+                ),
+                onPressed: () {
+                  _searchController.clear();
+                  controller.setSearchQuery('');
+                  FocusScope.of(context).unfocus();
+                },
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
       ),
-      onChanged: controller.setSearchQuery,
-    );
-  }
+      style: GoogleFonts.poppins(
+        fontSize: 16,
+        color: Colors.black87,
+      ),
+      onChanged: (value) {
+        controller.setSearchQuery(value);
+        setState(() {}); // Para actualizar el icono de limpiar
+      },
+    ),
+  );
+}
 
   Widget _buildCombosSection(BuildContext context, bool isAdmin) {
     final controller = context.watch<ServiceController>();
@@ -189,145 +246,167 @@ class _HomeContentState extends State<_HomeContent> {
   final services = await serviceController.getServicesByIds(combo.serviceIds);
 
   showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        height: MediaQuery.of(context).size.height * 0.85,
-        child: Column(
-          children: [
-            // Handle para arrastrar
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
+  context: context,
+  isScrollControlled: true,
+  backgroundColor: Colors.transparent,
+  builder: (context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white, // Fondo blanco
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      height: MediaQuery.of(context).size.height * 0.85,
+      child: Column(
+        children: [
+          // Handle para arrastrar
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Encabezado
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            combo.name,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Encabezado
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          combo.name,
+                          style: GoogleFonts.poppins( // Fuente Poppins
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.black54),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  
+                  // Imagen del combo
+                  const SizedBox(height: 16),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: combo.imageUrl != null
+                        ? Image.network(
+                            combo.imageUrl!,
+                            width: double.infinity,
+                            height: 180,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => HomeHelpers.buildPlaceholderImage(),
+                          )
+                        : HomeHelpers.buildPlaceholderImage(),
+                  ),
+                  
+                  // Precio y descuento
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Text(
+                        '\$${combo.totalPrice.toStringAsFixed(2)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
-                    ),
-                    
-                    // Imagen del combo
-                    const SizedBox(height: 16),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: combo.imageUrl != null
-                          ? Image.network(
-                              combo.imageUrl!,
-                              width: double.infinity,
-                              height: 180,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => HomeHelpers.buildPlaceholderImage(),
-                            )
-                          : HomeHelpers.buildPlaceholderImage(),
-                    ),
-                    
-                    // Precio y descuento
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
+                      ),
+                      if (combo.discount > 0) ...[
+                        const SizedBox(width: 8),
                         Text(
-                          '\$${combo.totalPrice.toStringAsFixed(2)}',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: theme.primaryColor,
+                          '-\$${combo.discount.toStringAsFixed(2)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.green,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        if (combo.discount > 0) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            '-\$${combo.discount.toStringAsFixed(2)}',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '\$${(combo.totalPrice - combo.discount).toStringAsFixed(2)}',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              decoration: TextDecoration.lineThrough,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    
-                    // Duración
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.access_time, size: 18, color: theme.hintColor),
                         const SizedBox(width: 8),
                         Text(
-                          '${combo.totalDuration ~/ 60}h ${combo.totalDuration % 60}min',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.hintColor,
+                          '\$${(combo.totalPrice - combo.discount).toStringAsFixed(2)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            decoration: TextDecoration.lineThrough,
+                            color: Colors.grey,
                           ),
                         ),
                       ],
-                    ),
-                    
-                    // Descripción
-                    if (combo.description.isNotEmpty) ...[
-                      const SizedBox(height: 16),
+                    ],
+                  ),
+                  
+                  // Duración
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time, 
+                        size: 18, 
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 8),
                       Text(
-                        combo.description,
-                        style: theme.textTheme.bodyMedium,
+                        '${combo.totalDuration ~/ 60}h ${combo.totalDuration % 60}min',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
-                    
-                    // Servicios incluidos
-                    const SizedBox(height: 24),
+                  ),
+                  
+                  // Descripción
+                  if (combo.description.isNotEmpty) ...[
+                    const SizedBox(height: 16),
                     Text(
-                      'Servicios incluidos (${services.length}):',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                      combo.description,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        color: Colors.grey[800],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    
-                    // Lista de servicios
-                    ...services.map((service) => HomeHelpers.buildServiceItem(service, theme)),
                   ],
-                ),
+                  
+                  // Servicios incluidos
+                  const SizedBox(height: 24),
+                  Text(
+                    'SERVICIOS INCLUIDOS (${services.length}):',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Lista de servicios
+                  ...services.map((service) => HomeHelpers.buildServiceItem(
+                    service, 
+                    theme.copyWith(
+                      textTheme: GoogleFonts.poppinsTextTheme(theme.textTheme),
+                      cardColor: Colors.white,
+                    ),
+                  )),
+                ],
               ),
             ),
-          ],
-        ),
-      );
-    },
-  );
+          ),
+        ],
+      ),
+    );
+  },
+);
 }
 
   Widget _buildServicesSection(BuildContext context, bool isAdmin) {
@@ -368,24 +447,29 @@ class _HomeContentState extends State<_HomeContent> {
   }
 
   Widget _buildSectionHeader({required String title, VoidCallback? onAdd, required bool isAdmin}) {
-    final isAdmin = Provider.of<ProfileController>(context, listen: false).isAdmin;
-    
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
-        if (isAdmin) // Solo muestra el botón si el usuario es admin
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
+      ),
+      if (isAdmin && onAdd != null)
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[200], // Fondo gris claro
+            borderRadius: BorderRadius.circular(50), // Bordes redondeados
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.add_outlined),
+            color: Colors.black, // Color del icono
             onPressed: onAdd,
           ),
-      ],
-    );
-  }
+        ),
+    ],
+  );
+}
 }

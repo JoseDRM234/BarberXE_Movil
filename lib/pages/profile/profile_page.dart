@@ -4,6 +4,7 @@ import 'package:barber_xe/pages/profile/widgets/admin_panel.dart';
 import 'package:barber_xe/pages/profile/widgets/profile_form.dart';
 import 'package:barber_xe/pages/profile/widgets/profile_header.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -28,10 +29,17 @@ class _ProfilePageState extends State<ProfilePage> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mi Perfil'),
+        title: Text(
+          'Mi Perfil',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
         centerTitle: true,
-        backgroundColor: Colors.black, // AppBar en color negro
-        foregroundColor: Colors.white, // Iconos y texto en blanco
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -51,14 +59,21 @@ class _ProfilePageState extends State<ProfilePage> {
       body: Consumer<ProfileController>(
         builder: (context, controller, _) {
           if (controller.isLoading && controller.currentUser == null) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).primaryColor,
+              ),
+            );
           }
           
           if (controller.currentUser == null) {
             return Center(
               child: Text(
                 'No se pudo cargar el perfil',
-                style: theme.textTheme.bodyLarge,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
               ),
             );
           }
@@ -81,35 +96,31 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
- Widget _buildEditSaveButton(ProfileController controller, BuildContext context) {
-  final theme = Theme.of(context);
+  Widget _buildEditSaveButton(ProfileController controller, BuildContext context) {
+    if (controller.isEditing) {
+      return const SizedBox.shrink();
+    }
 
-  if (controller.isEditing) {
-    // No mostramos el botón cuando está en modo edición
-    return const SizedBox.shrink();
+    return FilledButton(
+      onPressed: () {
+        controller.toggleEditMode();
+      },
+      style: FilledButton.styleFrom(
+        backgroundColor: Colors.grey[800],
+        minimumSize: const Size(double.infinity, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      child: Text(
+        'EDITAR PERFIL',
+        style: GoogleFonts.poppins(
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+          letterSpacing: 1.2,
+          color: Colors.white,
+        ),
+      ),
+    );
   }
-
-  // Mostrar solo el botón "EDITAR PERFIL"
-  return FilledButton(
-    onPressed: () {
-      controller.toggleEditMode(); // Cambia a modo edición
-    },
-    style: FilledButton.styleFrom(
-      backgroundColor: Colors.grey[800],
-      minimumSize: const Size(double.infinity, 50),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-    ),
-    child: Text(
-      'EDITAR PERFIL',
-      style: theme.textTheme.labelLarge?.copyWith(
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.2,
-        color: Colors.white,
-      ),
-    ),
-  );
-}
-
 }
