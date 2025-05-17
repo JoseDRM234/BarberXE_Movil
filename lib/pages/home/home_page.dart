@@ -134,16 +134,18 @@ class _HomeContentState extends State<_HomeContent> {
   }
   
 
- Widget _buildSearchBar(ServiceController controller) {
+Widget _buildSearchBar(ServiceController controller) {
   return Container(
+    constraints: BoxConstraints(
+      maxHeight: 40, 
+    ),
     decoration: BoxDecoration(
-      color: const Color.fromARGB(255, 255, 255, 255),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(20), // Borde más pequeño para coincidir con el diseño
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          blurRadius: 5,
-          offset: const Offset(0, 3),
+          color: Colors.black.withOpacity(0.05), // Sombra más suave
+          blurRadius: 8, // Radio de difuminado aumentado
+          offset: const Offset(0, 2), // Desplazamiento vertical reducido
         ),
       ],
     ),
@@ -151,48 +153,56 @@ class _HomeContentState extends State<_HomeContent> {
       controller: _searchController,
       decoration: InputDecoration(
         hintText: 'Buscar...',
-        hintStyle: TextStyle(
-          color: Colors.grey[400],
-          fontSize: 16,
+        hintStyle: GoogleFonts.poppins(
+          color: Colors.grey.shade500,
+          fontSize: 15, // Tamaño de fuente ligeramente reducido
+          fontWeight: FontWeight.w400, // Peso de fuente regular
         ),
         prefixIcon: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.only(left: 16, right: 12), // Ajuste fino de espaciado
           child: Icon(
-            Icons.search,
-            color: Colors.grey[600],
-            size: 24,
+            Icons.search_rounded,
+            color: Colors.grey.shade600,
+            size: 18, // Tamaño de ícono reducido
           ),
         ),
         suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-                padding: const EdgeInsets.only(right: 12),
-                icon: Icon(
-                  Icons.close,
-                  color: Colors.grey[600],
-                  size: 20,
+            ? Padding(
+                padding: const EdgeInsets.only(right: 12), // Alineación precisa
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close_rounded, // Ícono de cierre redondeado
+                    color: Colors.grey.shade600,
+                    size: 15, // Tamaño reducido
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                    controller.setSearchQuery('');
+                    FocusScope.of(context).unfocus();
+                  },
                 ),
-                onPressed: () {
-                  _searchController.clear();
-                  controller.setSearchQuery('');
-                  FocusScope.of(context).unfocus();
-                },
               )
             : null,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,
         ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 8, // Altura del campo reducida
+          horizontal: 0
+        ),
+        isDense: true, // Control preciso de densidad
       ),
       style: GoogleFonts.poppins(
-        fontSize: 16,
+        fontSize: 15,
         color: Colors.black87,
+        fontWeight: FontWeight.w500, // Peso de fuente medio
       ),
       onChanged: (value) {
         controller.setSearchQuery(value);
-        setState(() {}); // Para actualizar el icono de limpiar
+        setState(() {});
       },
     ),
   );
@@ -407,8 +417,8 @@ class _HomeContentState extends State<_HomeContent> {
     );
   },
 );
-}
 
+} 
   Widget _buildServicesSection(BuildContext context, bool isAdmin) {
     final controller = context.watch<ServiceController>();
 
