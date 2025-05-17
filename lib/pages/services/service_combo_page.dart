@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:barber_xe/models/service_combo.dart';
 import 'package:barber_xe/pages/services/service_selection_page.dart';
@@ -20,7 +22,7 @@ class ServiceComboPage extends StatefulWidget {
 
 class _ServiceComboPageState extends State<ServiceComboPage> {
   final _formKey = GlobalKey<FormState>();
-  dynamic _imageFile; // Corrección: quitar el ? innecesario
+  dynamic _imageFile;
   String? _imageUrl;
   late TextEditingController _nameController;
   late TextEditingController _descController;
@@ -35,21 +37,32 @@ class _ServiceComboPageState extends State<ServiceComboPage> {
     _imageUrl = widget.combo?.imageUrl;
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 600,
       imageQuality: 85,
     );
-    
+
     if (pickedFile != null) {
       if (kIsWeb) {
         final bytes = await pickedFile.readAsBytes();
-        setState(() => _imageFile = bytes);
+        setState(() {
+          _imageFile = bytes;
+          _imageUrl = null;
+        });
       } else {
-        setState(() => _imageFile = File(pickedFile.path));
+        setState(() {
+          _imageFile = File(pickedFile.path);
+          _imageUrl = null;
+        });
       }
     }
   }
@@ -77,19 +90,16 @@ class _ServiceComboPageState extends State<ServiceComboPage> {
 
       try {
         String? newImageUrl;
-        print(_imageFile);
-        if (_imageFile != null) {
-        // Eliminar imagen anterior si existe
-        if (widget.combo?.imageUrl != null) {
-          await storage.deleteImage(widget.combo!.imageUrl);
-        }
         
-        // Subir nueva imagen
-        newImageUrl = await storage.uploadImage(
-          _imageFile,
-          folder: 'combos'
-        );
-      }
+        if (_imageFile != null) {
+          // Eliminar imagen anterior si existe
+          if (widget.combo?.imageUrl != null) {
+            await storage.deleteImage(widget.combo!.imageUrl!);
+          }
+          
+          // Subir nueva imagen
+          newImageUrl = await storage.uploadServiceImage(_imageFile);
+        }
 
         final updatedCombo = ServiceCombo(
           id: widget.combo?.id ?? '',
@@ -128,78 +138,162 @@ class _ServiceComboPageState extends State<ServiceComboPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.combo != null ? 'Editar Combo' : 'Nuevo Combo'),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        actions: [IconButton(icon: const Icon(Icons.save), onPressed: _saveCombo)],
+        title: Text(
+          widget.combo != null ? 'Editar Combo' : 'Nuevo Combo',
+          style: GoogleFonts.poppins(),
+        ),
       ),
-      body: _buildFormContent(),
-    );
-  }
-
-  Widget _buildFormContent() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Form(
-        key: _formKey,
-        child: ListView(
-          children: [
-            _buildImageSection(),
-            const SizedBox(height: 20),
-            _buildNameField(),
-            const SizedBox(height: 20),
-            _buildDescriptionField(),
-            const SizedBox(height: 20),
-            _buildSelectedServicesSection(),
-            const SizedBox(height: 20),
-            _buildServiceSelectionButton(),
-          ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              _buildImageSection(),
+              const SizedBox(height: 20),
+              _buildTextField(
+                controller: _nameController,
+                label: 'Nombre del Combo',
+                icon: Icons.assignment,
+                validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+              ),
+              const SizedBox(height: 20),
+              _buildTextField(
+                controller: _descController,
+                label: 'Descripción',
+                icon: Icons.description,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 20),
+              _buildServiceSelectionButton(),
+              const SizedBox(height: 20),
+              _buildSelectedServicesSection(),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.save),
+                  label: Text('Guardar Combo', style: GoogleFonts.poppins(fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _saveCombo,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildImageSection() {
-    if (_imageFile != null) {
-      // Mostrar imagen seleccionada localmente (web o móvil)
-      return kIsWeb
-          ? Image.memory(_imageFile, height: 200, fit: BoxFit.cover)
-          : Image.file(_imageFile, height: 200, fit: BoxFit.cover);
-    } else if (_imageUrl != null) {
-      // Mostrar imagen desde la URL ya almacenada
-      return Image.network(_imageUrl!, height: 200, fit: BoxFit.cover);
-    } else {
-      return GestureDetector(
-        onTap: _pickImage,
-        child: Container(
-          height: 200,
-          color: Colors.grey[200],
-          child: const Center(child: Text("Selecciona una imagen")),
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _pickImage,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+              ),
+              child: (_imageUrl != null || _imageFile != null)
+                  ? Image(
+                      image: _getImageProvider(),
+                      fit: BoxFit.cover,
+                    )
+                  : const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image, size: 40, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Agregar imagen', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+            ),
+          ),
         ),
-      );
-    }
-  }
-
-  Widget _buildNameField() {
-    return TextFormField(
-      controller: _nameController,
-      decoration: const InputDecoration(labelText: 'Nombre del Combo'),
-      validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+        const SizedBox(height: 10)
+      ],
     );
   }
 
-  Widget _buildDescriptionField() {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
-      controller: _descController,
-      decoration: const InputDecoration(labelText: 'Descripción'),
-      maxLines: 3,
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      validator: validator,
+      style: GoogleFonts.poppins(
+        fontSize: 15,
+        color: Colors.black87,
+        fontWeight: FontWeight.w500,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.poppins(
+          color: Colors.grey[600],
+          fontWeight: FontWeight.w400,
+          fontSize: 14,
+        ),
+        prefixIcon: Icon(icon, color: Colors.grey[500], size: 20),
+        filled: true,
+        fillColor: Colors.grey[100],
+        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.black87.withOpacity(0.7), width: 1.2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+        ),
+      ),
     );
   }
 
   Widget _buildServiceSelectionButton() {
-    return ElevatedButton(
-      onPressed: _selectServices,
-      child: const Text('Seleccionar Servicios'),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.add_circle_outline),
+        label: Text('Seleccionar Servicios', style: GoogleFonts.poppins()),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.grey[100],
+          foregroundColor: Colors.black87,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(color: Colors.grey[300]!),
+          ),
+        ),
+        onPressed: _selectServices,
+      ),
     );
   }
 
@@ -210,35 +304,100 @@ class _ServiceComboPageState extends State<ServiceComboPage> {
             .where((s) => _selectedServiceIds.contains(s.id))
             .toList();
 
+        if (services.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              'No hay servicios seleccionados',
+              style: GoogleFonts.poppins(
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          );
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Servicios incluidos:', 
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            ...services.map((service) => ListTile(
-              leading: service.imageUrl != null
-                  ? CircleAvatar(
-                      backgroundImage: NetworkImage(service.imageUrl!),
-                      radius: 20,
-                    )
-                  : const CircleAvatar(
-                      radius: 20,
-                      child: Icon(Icons.cut),
+            Text(
+              'Servicios incluidos (${services.length}):',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...services.map((service) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      image: service.imageUrl != null
+                          ? DecorationImage(
+                              image: NetworkImage(service.imageUrl!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                      color: service.imageUrl == null ? Colors.grey[200] : null,
                     ),
-              title: Text(service.name),
-              trailing: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => setState(
-                  () => _selectedServiceIds.remove(service.id)),
+                    child: service.imageUrl == null
+                        ? const Icon(Icons.cut, color: Colors.grey)
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          service.name,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '\$${service.price.toStringAsFixed(2)} • ${service.duration} min',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => setState(
+                      () => _selectedServiceIds.remove(service.id)),
+                  ),
+                ],
               ),
             )),
-            if (services.isEmpty)
-              const Text('No hay servicios seleccionados',
-                style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
           ],
         );
       },
     );
+  }
+
+  ImageProvider _getImageProvider() {
+    if (_imageUrl != null) return NetworkImage(_imageUrl!);
+    if (kIsWeb) return MemoryImage(_imageFile as Uint8List);
+    return FileImage(_imageFile as File);
   }
 }
