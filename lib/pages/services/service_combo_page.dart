@@ -83,56 +83,57 @@ class _ServiceComboPageState extends State<ServiceComboPage> {
     }
   }
 
-  Future<void> _saveCombo() async {
-    if (_formKey.currentState!.validate()) {
-      final controller = Provider.of<ServiceController>(context, listen: false);
-      final storage = Provider.of<StorageService>(context, listen: false);
+Future<void> _saveCombo() async {
+  if (_formKey.currentState!.validate()) {
+    final controller = Provider.of<ServiceController>(context, listen: false);
+    final storage = Provider.of<StorageService>(context, listen: false);
 
-      try {
-        String? newImageUrl;
-        
-        if (_imageFile != null) {
-          // Eliminar imagen anterior si existe
-          if (widget.combo?.imageUrl != null) {
-            await storage.deleteImage(widget.combo!.imageUrl!);
-          }
-          
-          // Subir nueva imagen
-          newImageUrl = await storage.uploadServiceImage(_imageFile);
+    try {
+      String? newImageUrl;
+      
+      if (_imageFile != null) {
+        // Eliminar imagen anterior si existe
+        if (widget.combo?.imageUrl != null) {
+          await storage.deleteImage(widget.combo!.imageUrl!);
         }
+        
+        // Subir nueva imagen
+        newImageUrl = await storage.uploadServiceImage(_imageFile);
+      }
 
-        final updatedCombo = ServiceCombo(
-          id: widget.combo?.id ?? '',
+      final updatedCombo = ServiceCombo(
+        id: widget.combo?.id ?? '',
+        name: _nameController.text,
+        description: _descController.text,
+        totalPrice: widget.combo?.totalPrice ?? 0.0,
+        discount: widget.combo?.discount ?? 0.0,
+        totalDuration: widget.combo?.totalDuration ?? 0,
+        serviceIds: _selectedServiceIds,
+        imageUrl: newImageUrl ?? widget.combo?.imageUrl,
+        isActive: widget.combo?.isActive ?? true, // Incluimos el estado
+        createdAt: widget.combo?.createdAt ?? DateTime.now(),
+      );
+
+      if (widget.combo != null) {
+        await controller.updateCombo(updatedCombo);
+      } else {
+        await controller.addCombo(
           name: _nameController.text,
           description: _descController.text,
-          totalPrice: widget.combo?.totalPrice ?? 0.0,
-          discount: widget.combo?.discount ?? 0.0,
-          totalDuration: widget.combo?.totalDuration ?? 0,
           serviceIds: _selectedServiceIds,
-          imageUrl: newImageUrl ?? widget.combo?.imageUrl,
-          isActive: widget.combo?.isActive ?? true,
-          createdAt: widget.combo?.createdAt ?? DateTime.now(),
-        );
-
-        if (widget.combo != null) {
-          await controller.updateCombo(updatedCombo);
-        } else {
-          await controller.addCombo(
-            name: _nameController.text,
-            description: _descController.text,
-            serviceIds: _selectedServiceIds,
-            discount: 0.0,
-            imageUrl: newImageUrl,
-          );
-        }
-        Navigator.pop(context);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          discount: 0.0,
+          imageUrl: newImageUrl,
+          isActive: true, // Nuevos combos siempre activos por defecto
         );
       }
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
