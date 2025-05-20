@@ -103,7 +103,7 @@ class ProfileController with ChangeNotifier {
         'nombre': data.nombre,
         'apellido': data.apellido,
         'telefono': data.telefono,
-        if (data.fotoUrl != null) 'fotoUrl': data.fotoUrl,
+        'photoUrl': data.fotoUrl, // Corregir nombre del campo
       });
 
       if (data.password != null && data.password!.isNotEmpty) {

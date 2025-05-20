@@ -1,4 +1,5 @@
 import 'package:barber_xe/models/service_model.dart';
+import 'package:barber_xe/pages/appointment/AdminAppointmentsPage.dart';
 import 'package:barber_xe/pages/appointment/appointment_page.dart';
 import 'package:barber_xe/pages/auth/login_page.dart';
 import 'package:barber_xe/pages/auth/register_page.dart';
@@ -19,6 +20,7 @@ class AppRouter {
   static const String service = '/service';
   static const String appointments = '/appointments';
   static const String barbers = '/barbers';
+  static const String adminAppointments = '/adminAppointments';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final authService = Provider.of<AuthService>(navigatorKey.currentContext!, listen: false);
@@ -56,6 +58,8 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => ServicePage(service: service),
         );
+      case adminAppointments:
+        return MaterialPageRoute(builder: (_) => const AdminAppointmentsPage());
       case appointments:
         return MaterialPageRoute(builder: (_) => const AppointmentPage());
       default:

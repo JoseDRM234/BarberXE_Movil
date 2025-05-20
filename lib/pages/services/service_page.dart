@@ -104,7 +104,6 @@ Future<void> _pickImage() async {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = GoogleFonts.poppins(fontSize: 16);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,

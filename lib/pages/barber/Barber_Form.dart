@@ -6,7 +6,7 @@ import 'dart:io';
 
 class BarberFormDialog extends StatefulWidget {
   final Barber? barber;
-  final Function(Barber) onSubmit;
+  final Function(Barber, File?) onSubmit;
 
   const BarberFormDialog({super.key, this.barber, required this.onSubmit});
 
@@ -417,7 +417,7 @@ class _BarberFormDialogState extends State<BarberFormDialog> {
         shortDescription: _descriptionController.text,
         photoUrl: _photoUrl,
       );
-      widget.onSubmit(barber);
+      widget.onSubmit(barber,_imageFile);
       Navigator.pop(context);
     }
   }
