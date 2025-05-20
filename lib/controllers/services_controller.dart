@@ -22,15 +22,24 @@ class ServiceController with ChangeNotifier {
   List<BarberService> get services => _filteredServices;
   bool get isLoading => _isLoading;
 
-  List<T> _filterItems<T>(List<T> items) {
-    if (_searchQuery.isEmpty) return items;
-    return items.where((item) {
-      final name = (item is BarberService) 
-          ? item.name 
-          : (item as ServiceCombo).name;
-      return name.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
-  }
+List<T> _filterItems<T>(List<T> items, {bool onlyActive = true}) {
+  final filteredByState = onlyActive
+      ? items.where((item) {
+          if (item is BarberService) return item.isActive;
+          if (item is ServiceCombo) return item.isActive;
+          return true;
+        }).toList()
+      : items;
+
+  if (_searchQuery.isEmpty) return filteredByState;
+
+  return filteredByState.where((item) {
+    final name = (item is BarberService)
+        ? item.name
+        : (item as ServiceCombo).name;
+    return name.toLowerCase().contains(_searchQuery.toLowerCase());
+  }).toList();
+}
 
   List<String> get categories => _allServices
       .map((s) => s.category)
@@ -116,6 +125,27 @@ class ServiceController with ChangeNotifier {
     await loadServicesAndCombos();
   }
 
+List<ServiceCombo> getCombosForRoleSimple({required bool isAdmin}) {
+  if (isAdmin) {
+    // Admin ve TODOS los combos, activos o inactivos
+    return _filterItems(_combos, onlyActive: false);
+  } else {
+    // Cliente ve solo combos activos
+    return _filterItems(_combos, onlyActive: true);
+  }
+}
+
+List<BarberService> getServicesForRole({required bool isAdmin}) {
+  if (isAdmin) {
+    // Admin ve TODOS los servicios, activos o inactivos
+    return _services;
+  } else {
+    // Cliente ve solo servicios activos
+    return _services.where((service) => service.isActive).toList();
+  }
+}
+
+
   Future<void> toggleServiceState(String id, bool isActive) async {
     await _firestoreService.toggleServiceState(id, isActive);
     await loadServicesAndCombos();
@@ -153,47 +183,45 @@ class ServiceController with ChangeNotifier {
   }
 
   // En ServiceController
-  Future<void> addCombo({
-    required String name,
-    required String description,
-    required List<String> serviceIds,
-    required double discount,
-    String? imageUrl,
-  }) async {
-    try {
-      // Obtener servicios actualizados
-      final services = await _firestoreService.getServicesByIds(serviceIds);
-      
-      // Cálculo de precios y duración
-      final totalPrice = services.fold<double>(0, (sum, doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return sum + (data['price'] as num).toDouble();
-      });
+ Future<void> addCombo({
+  required String name,
+  required String description,
+  required List<String> serviceIds,
+  required double discount,
+  String? imageUrl,
+  bool isActive = true, // Añade este parámetro
+}) async {
+  try {
+    final services = await _firestoreService.getServicesByIds(serviceIds);
+    
+    final totalPrice = services.fold<double>(0, (sum, doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return sum + (data['price'] as num).toDouble();
+    });
 
-      final totalDuration = services.fold<int>(0, (sum, doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return sum + (data['duration'] as num).toInt();
-      });
+    final totalDuration = services.fold<int>(0, (sum, doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return sum + (data['duration'] as num).toInt();
+    });
 
-      await _firestoreService.addCombo({
-        'name': name,
-        'description': description,
-        'totalPrice': totalPrice - discount,
-        'discount': discount,
-        'totalDuration': totalDuration,
-        'serviceIds': serviceIds,
-        'imageUrl': imageUrl,
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+    await _firestoreService.addCombo({
+      'name': name,
+      'description': description,
+      'totalPrice': totalPrice - discount,
+      'discount': discount,
+      'totalDuration': totalDuration,
+      'serviceIds': serviceIds,
+      'imageUrl': imageUrl,
+      'isActive': isActive, // Incluye el estado
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-      await loadServicesAndCombos(); // Forzar recarga
-    } catch (e) {
-      debugPrint('Error adding combo: $e');
-      rethrow;
-    }
+    await loadServicesAndCombos();
+  } catch (e) {
+    debugPrint('Error adding combo: $e');
+    rethrow;
   }
-
+}
   Future<void> updateCombo(ServiceCombo combo) async {
     await _firestoreService.updateCombo(combo.id, combo.toFirestore());
     await loadServicesAndCombos();

@@ -8,8 +8,7 @@ class FirestoreService {
 
   // --- Services ---
   Future<List<BarberService>> fetchServices() async {
-    final snapshot = await _db.collection('services')
-        .where('isActive', isEqualTo: true).get();
+    final snapshot = await _db.collection('services').get(); // Sin filtro
     return snapshot.docs.map((doc) => BarberService.fromFirestore(doc)).toList();
   }
 
@@ -34,11 +33,10 @@ class FirestoreService {
   
 
   // --- Combos ---
-  Future<List<ServiceCombo>> fetchCombos() async {
-    final snapshot = await _db.collection('combos')
-        .where('isActive', isEqualTo: true).get();
-    return snapshot.docs.map((doc) => ServiceCombo.fromFirestore(doc)).toList();
-  }
+Future<List<ServiceCombo>> fetchCombos() async {
+  final snapshot = await _db.collection('combos').get(); // Sin filtro
+  return snapshot.docs.map((doc) => ServiceCombo.fromFirestore(doc)).toList();
+}
 
   Future<void> addCombo(Map<String, dynamic> data) async {
     await _db.collection('combos').add(data);

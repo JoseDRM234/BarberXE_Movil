@@ -2,6 +2,7 @@ import 'package:barber_xe/controllers/profile_controller.dart';
 import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:barber_xe/models/service_combo.dart';
 import 'package:barber_xe/pages/appointment/appointments_dashboard_page.dart';
+import 'package:barber_xe/pages/auth/widgets/Active_button.dart';
 import 'package:barber_xe/pages/services/service_combo_page.dart';
 import 'package:barber_xe/pages/services/service_page.dart';
 import 'package:barber_xe/pages/widget/home_helpers.dart';
@@ -208,219 +209,384 @@ Widget _buildSearchBar(ServiceController controller) {
   );
 }
 
-  Widget _buildCombosSection(BuildContext context, bool isAdmin) {
-    final controller = context.watch<ServiceController>();
+ Widget _buildCombosSection(BuildContext context, bool isAdmin) {
+  final controller = context.watch<ServiceController>();
+  final combosToShow = controller.getCombosForRoleSimple(isAdmin: isAdmin);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader(
-          title: 'Combos',
-          onAdd: isAdmin ? () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ServiceComboPage()),
-          ) : null,
-          isAdmin: isAdmin,
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSectionHeader(
+        title: 'Combos',
+        onAdd: isAdmin
+            ? () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ServiceComboPage()),
+                )
+            : null,
+        isAdmin: isAdmin,
+      ),
+      const SizedBox(height: 12),
+      SizedBox(
+        height: 220,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: combosToShow.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 16),
+          itemBuilder: (context, index) {
+            final combo = combosToShow[index];
+            return SelectableItemCard(
+              isCombo: true,
+              title: combo.name,
+              price: combo.totalPrice,
+              duration: combo.totalDuration,
+              imageUrl: combo.imageUrl,
+              description: combo.description,
+              isSelected: false,
+              onTap: () => _showComboDetails(context, combo, isAdmin),
+            );
+          },
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 220,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: controller.combos.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              final combo = controller.combos[index];
-              return SelectableItemCard(
-                isCombo: true,
-                title: combo.name,
-                price: combo.totalPrice,
-                duration: combo.totalDuration,
-                imageUrl: combo.imageUrl,
-                description: combo.description,
-                isSelected: false,
-                onTap: () => _showComboDetails(context, combo),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
-  void _showComboDetails(BuildContext context, ServiceCombo combo) async {
+
+
+void _showComboDetails(BuildContext context, ServiceCombo combo, bool isAdmin) async {
   final theme = Theme.of(context);
   final serviceController = context.read<ServiceController>();
-  
-  // Obtener los servicios completos a partir de los IDs
   final services = await serviceController.getServicesByIds(combo.serviceIds);
 
   showModalBottomSheet(
-  context: context,
-  isScrollControlled: true,
-  backgroundColor: Colors.transparent,
-  builder: (context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white, // Fondo blanco
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      height: MediaQuery.of(context).size.height * 0.85,
-      child: Column(
-        children: [
-          // Handle para arrastrar
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        height: MediaQuery.of(context).size.height * 0.85,
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Encabezado
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          combo.name,
-                          style: GoogleFonts.poppins( // Fuente Poppins
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Encabezado
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            combo.name,
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.black54),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  
-                  // Imagen del combo
-                  const SizedBox(height: 16),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: combo.imageUrl != null
-                        ? Image.network(
-                            combo.imageUrl!,
-                            width: double.infinity,
-                            height: 180,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => HomeHelpers.buildPlaceholderImage(),
-                          )
-                        : HomeHelpers.buildPlaceholderImage(),
-                  ),
-                  
-                  // Precio y descuento
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Text(
-                        '\$${combo.totalPrice.toStringAsFixed(2)}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.bold,
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.black54),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                      ),
-                      if (combo.discount > 0) ...[
-                        const SizedBox(width: 8),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: combo.imageUrl != null
+                          ? Image.network(
+                              combo.imageUrl!,
+                              width: double.infinity,
+                              height: 180,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  HomeHelpers.buildPlaceholderImage(),
+                            )
+                          : HomeHelpers.buildPlaceholderImage(),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
                         Text(
-                          '-\$${combo.discount.toStringAsFixed(2)}',
+                          '\$${combo.totalPrice.toStringAsFixed(2)}',
                           style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: Colors.green,
+                            fontSize: 20,
+                            color: theme.primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        if (combo.discount > 0) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '-\$${combo.discount.toStringAsFixed(2)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '\$${(combo.totalPrice - combo.discount).toStringAsFixed(2)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time, size: 18, color: Colors.grey[600]),
                         const SizedBox(width: 8),
                         Text(
-                          '\$${(combo.totalPrice - combo.discount).toStringAsFixed(2)}',
+                          '${combo.totalDuration ~/ 60}h ${combo.totalDuration % 60}min',
                           style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            decoration: TextDecoration.lineThrough,
-                            color: Colors.grey,
+                            fontSize: 14,
+                            color: Colors.grey[600],
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                  
-                  // Duración
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time, 
-                        size: 18, 
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 8),
+                    ),
+                    if (combo.description.isNotEmpty) ...[
+                      const SizedBox(height: 16),
                       Text(
-                        '${combo.totalDuration ~/ 60}h ${combo.totalDuration % 60}min',
+                        combo.description,
                         style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                          fontSize: 15,
+                          color: Colors.grey[800],
                         ),
                       ),
                     ],
-                  ),
-                  
-                  // Descripción
-                  if (combo.description.isNotEmpty) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     Text(
-                      combo.description,
+                      'SERVICIOS INCLUIDOS (${services.length}):',
                       style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        color: Colors.grey[800],
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                        letterSpacing: 0.5,
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    ...services.map((service) => HomeHelpers.buildServiceItem(
+                          service,
+                          theme.copyWith(
+                            textTheme: GoogleFonts.poppinsTextTheme(theme.textTheme),
+                            cardColor: Colors.white,
+                          ),
+                        )),
+                    if (isAdmin) ...[
+                      const SizedBox(height: 24),
+                      // Contenedor para los botones de administración
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          children: [
+                            // Botón de toggle
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: combo.isActive ? Colors.red[100] : Colors.green[100],
+                                  foregroundColor: combo.isActive ? Colors.red : Colors.green,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                onPressed: () async {
+                                  final nuevoEstado = !combo.isActive;
+                                  final updatedCombo = combo.copyWith(isActive: nuevoEstado);
+                                  await serviceController.updateCombo(updatedCombo);
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          nuevoEstado ? 'Combo activado' : 'Combo desactivado',
+                                          style: GoogleFonts.poppins(),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(combo.isActive ? Icons.toggle_on : Icons.toggle_off, size: 24),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      combo.isActive ? 'Desactivar Combo' : 'Activar Combo',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Botones de editar y eliminar
+                            Row(
+                              children: [
+                                // Botón de editar
+                                Expanded(
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue[50],
+                                      foregroundColor: Colors.blue,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ServiceComboPage(combo: combo),
+                                        ),
+                                      );
+                                    },
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.edit, size: 20),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Editar',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Botón de eliminar
+                                Expanded(
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red[50],
+                                      foregroundColor: Colors.red,
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: Text(
+                                            'Eliminar combo',
+                                            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                                          ),
+                                          content: Text(
+                                            '¿Estás seguro? Esta acción no se puede deshacer.',
+                                            style: GoogleFonts.poppins(),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              child: Text('Cancelar', style: GoogleFonts.poppins()),
+                                              onPressed: () => Navigator.pop(ctx, false),
+                                            ),
+                                            TextButton(
+                                              child: Text(
+                                                'Eliminar',
+                                                style: GoogleFonts.poppins(color: Colors.red),
+                                              ),
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (confirm == true) {
+                                        await serviceController.deleteCombo(combo.id);
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Combo eliminado',
+                                                style: GoogleFonts.poppins(),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.delete, size: 20),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Eliminar',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ],
-                  
-                  // Servicios incluidos
-                  const SizedBox(height: 24),
-                  Text(
-                    'SERVICIOS INCLUIDOS (${services.length}):',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Lista de servicios
-                  ...services.map((service) => HomeHelpers.buildServiceItem(
-                    service, 
-                    theme.copyWith(
-                      textTheme: GoogleFonts.poppinsTextTheme(theme.textTheme),
-                      cardColor: Colors.white,
-                    ),
-                  )),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  },
-);
+          ],
+        ),
+      );
+    },
+  );
+}
 
-} 
+
   Widget _buildServicesSection(BuildContext context, bool isAdmin) {
     final controller = context.watch<ServiceController>();
+    final servicesToShow = controller.getServicesForRole(isAdmin: isAdmin);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,10 +603,10 @@ Widget _buildSearchBar(ServiceController controller) {
         ListView.separated(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
-          itemCount: controller.services.length,
+          itemCount: servicesToShow.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final service = controller.services[index];
+            final service = servicesToShow[index];
             return ServiceCard(
               service: service,
               onEdit: isAdmin ? () => Navigator.push(
