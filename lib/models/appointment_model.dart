@@ -74,4 +74,11 @@ class Appointment {
       updatedAt: data['updatedAt']?.toDate(),
     );
   }
+  
+  static const List<String> statusOptions = [
+    'pending',
+    'confirmed',
+    'completed',
+    'cancelled'
+  ];
 }

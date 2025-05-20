@@ -57,4 +57,14 @@ class BarberService {
       throw Exception('Error al obtener barberos activos: $e');
     }
   }
+
+  Future<List<Barber>> getBarbersByWorkingDay(int day) async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('barbers')
+      .where('status', isEqualTo: 'active')
+      .where('workingDays', arrayContains: day)
+      .get();
+
+  return snapshot.docs.map((doc) => Barber.fromFirestore(doc)).toList();
+}
 }

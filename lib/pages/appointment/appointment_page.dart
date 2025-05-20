@@ -1,5 +1,8 @@
+import 'package:barber_xe/controllers/barber_controller.dart';
+import 'package:barber_xe/models/barber_model.dart';
 import 'package:barber_xe/pages/services/all_combos_page.dart';
 import 'package:barber_xe/pages/services/all_services_page.dart';
+import 'package:barber_xe/pages/widget/BusyTimeList.dart';
 import 'package:barber_xe/pages/widget/selectable_item_card.dart';
 import 'package:barber_xe/services/appointment_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -35,11 +38,8 @@ class _AppointmentContent extends StatefulWidget {
 }
 
 class _AppointmentContentState extends State<_AppointmentContent> {
-  final List<String> _availableTimes = [
-    '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', 
-    '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM'
-  ];
-
+  int? _cachedBarberDay;
+  Future<List<Barber>>? _barbersFuture;
   @override
   void initState() {
     super.initState();
@@ -93,7 +93,16 @@ class _AppointmentContentState extends State<_AppointmentContent> {
     final theme = Theme.of(context);
     final appointmentController = Provider.of<AppointmentController>(context);
     final serviceController = Provider.of<ServiceController>(context);
+    final barberController = Provider.of<BarberController>(context);
     final totalPrice = appointmentController.calculateTotalPrice();
+
+    if (appointmentController.selectedDate != null) {
+      final currentDay = appointmentController.selectedDate!.weekday - 1;
+      if (currentDay != _cachedBarberDay) {
+        _cachedBarberDay = currentDay;
+        _barbersFuture = barberController.getBarbersByDay(currentDay);
+      }
+    }
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -107,7 +116,7 @@ class _AppointmentContentState extends State<_AppointmentContent> {
             const SizedBox(height: 16),
             _buildDateTimeSelectionSection(appointmentController),
             const SizedBox(height: 16),
-            _buildBarberSelection(),
+            _buildBarberSelection(_barbersFuture),
             const SizedBox(height: 16),
             _buildPaymentMethodCard(theme),
             const SizedBox(height: 16),
@@ -344,88 +353,484 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
     );
   }
 
-  Widget _buildBarberSelection() {
-    return FutureBuilder<QuerySnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('barbers')
-          .where('status', isEqualTo: 'active')
-          .get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: SizedBox(
-              width: 50,
-              height: 50,
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return const Text('Error al cargar barberos');
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Text('No hay barberos disponibles');
-        }
-
-        final barbers = snapshot.data!.docs;
-
-        return Consumer<AppointmentController>(
-          builder: (context, controller, _) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Barbero',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: DropdownButton<String>(
-                      value: controller.selectedBarberId,
-                      isExpanded: true,
-                      underline: const SizedBox(),
-                      hint: const Text('Selecciona un barbero'),
-                      items: barbers.map((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        return DropdownMenuItem<String>(
-                          value: doc.id,
-                          child: Text(data['name'] ?? 'Barbero sin nombre'),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          final selectedBarber = barbers.firstWhere(
-                            (doc) => doc.id == newValue,
-                          );
-                          final data = selectedBarber.data() as Map<String, dynamic>;
-                          controller.setSelectedBarber(
-                            newValue,
-                            data['name']?.toString() ?? 'Barbero',
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+  Widget _buildBarberSelection(Future<List<Barber>>? barbersFuture) {
+  final controller = Provider.of<AppointmentController>(context);
+  
+  if (controller.selectedDate == null) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: Text('Selecciona una fecha primero'),
     );
   }
+
+  return FutureBuilder<List<Barber>>(
+    future: barbersFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      if (snapshot.hasError) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Error al cargar barberos',
+            style: TextStyle(color: Colors.red[700]),
+          ),
+        );
+      }
+
+      final barbers = snapshot.data ?? [];
+
+      if (barbers.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'No hay barberos disponibles este día',
+            style: TextStyle(fontStyle: FontStyle.italic),
+          ),
+        );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 12),
+            child: Row(
+              children: [
+                const Icon(Icons.content_cut, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Elige tu Barbero',
+                  style: TextStyle(
+                    fontSize: 18, 
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: barbers.length,
+              itemBuilder: (context, index) {
+                final barber = barbers[index];
+                final isSelected = controller.selectedBarberId == barber.id;
+                
+                return GestureDetector(
+                  onTap: () {
+                    controller.setSelectedBarber(barber.id, barber.name);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    width: 145,
+                    decoration: BoxDecoration(
+                      gradient: isSelected 
+                          ? LinearGradient(
+                              colors: [
+                                Theme.of(context).primaryColor.withOpacity(0.2),
+                                Theme.of(context).primaryColor.withOpacity(0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: isSelected ? null : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? Theme.of(context).primaryColor : Colors.grey.shade300,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isSelected 
+                              ? Theme.of(context).primaryColor.withOpacity(0.3)
+                              : Colors.grey.withOpacity(0.1),
+                          blurRadius: isSelected ? 8 : 4,
+                          spreadRadius: isSelected ? 1 : 0,
+                          offset: Offset(0, isSelected ? 3 : 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Foto y badge de selección
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(14),
+                                topRight: Radius.circular(14),
+                              ),
+                              child: Container(
+                                height: 110,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.grey.shade300,
+                                      Colors.grey.shade200,
+                                    ],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                  ),
+                                ),
+                                child: barber.photoUrl != null && barber.photoUrl!.isNotEmpty
+                                  ? Image.network(
+                                      barber.photoUrl!,
+                                      height: 110,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                    loadingProgress.expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        );
+                                      },
+                                      errorBuilder: (context, error, stackTrace) => 
+                                        const Center(
+                                          child: Icon(Icons.person, size: 50, color: Colors.white),
+                                        ),
+                                    )
+                                  : const Center(
+                                      child: Icon(Icons.person, size: 50, color: Colors.white),
+                                    ),
+                              ),
+                            ),
+                            if (isSelected)
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).primaryColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        
+                        // Información del barbero - Aquí está el problema
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                barber.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: isSelected 
+                                      ? Theme.of(context).primaryColor 
+                                      : Colors.black87,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.star, color: Colors.amber, size: 16),
+                                  Text(
+                                    " ${barber.rating.toStringAsFixed(1)}",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              
+                              // Botón de ver perfil
+                              InkWell(
+                                onTap: () => _showBarberDetails(context, barber),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? Theme.of(context).primaryColor.withOpacity(0.9)
+                                        : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.account_circle_outlined,
+                                        size: 12,
+                                        color: isSelected ? Colors.white : Colors.grey[700],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Ver perfil',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                          color: isSelected ? Colors.white : Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+void _showBarberDetails(BuildContext context, Barber barber) {
+  // Formatear las horas de trabajo
+  final startHour = barber.workingHours['start'] ?? '09:00';
+  final endHour = barber.workingHours['end'] ?? '18:00';
+  
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) => Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Cabecera con foto y datos principales
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Foto del barbero
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: barber.photoUrl != null && barber.photoUrl!.isNotEmpty
+                    ? Image.network(
+                        barber.photoUrl!,
+                        height: 100,
+                        width: 100,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 100,
+                          width: 100,
+                          color: Colors.grey.shade300,
+                          child: const Icon(Icons.person, size: 50, color: Colors.grey),
+                        ),
+                      )
+                    : Container(
+                        height: 100,
+                        width: 100,
+                        color: Colors.grey.shade300,
+                        child: const Icon(Icons.person, size: 50, color: Colors.grey),
+                      ),
+                ),
+                const SizedBox(width: 16),
+                
+                // Información del barbero
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        barber.name,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      // Status
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            color: barber.status == 'active' ? Colors.green : Colors.grey,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            barber.status == 'active' ? 'Disponible' : 'No disponible',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: barber.status == 'active' ? Colors.green : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 8),
+                      
+                      // Rating
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 18),
+                          const SizedBox(width: 4),
+                          Text(
+                            barber.rating.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Descripción
+            if (barber.shortDescription.isNotEmpty) ...[
+              const Text(
+                'Descripción',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                barber.shortDescription,
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+            ],
+            
+            // Horario de trabajo
+            const Text(
+              'Horario',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.access_time, size: 16, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  '$startHour - $endHour',
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Días de trabajo
+            const Text(
+              'Días disponibles',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            _buildWorkDays(barber.workingDays),
+            
+            const SizedBox(height: 24),
+            
+            // Botón para seleccionar al barbero
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Provider.of<AppointmentController>(context, listen: false)
+                    .setSelectedBarber(barber.id, barber.name);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text(
+                  'Seleccionar Barbero',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildWorkDays(List<int> workingDays) {
+  final daysNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    children: List.generate(7, (index) {
+      final isWorkDay = workingDays.contains(index);
+      
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isWorkDay ? Colors.green.shade100 : Colors.grey.shade200,
+          border: Border.all(
+            color: isWorkDay ? Colors.green : Colors.grey.shade400,
+            width: 2,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            daysNames[index],
+            style: TextStyle(
+              color: isWorkDay ? Colors.green.shade800 : Colors.grey.shade600,
+              fontWeight: isWorkDay ? FontWeight.bold : FontWeight.normal,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      );
+    }),
+  );
+}
 
   Widget _buildPaymentMethodCard(ThemeData theme) {
     return Card(
@@ -600,24 +1005,7 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
     }
   }
 
-  TimeOfDay _parseTime(String timeStr) {
-    final timeRegex = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)?$', caseSensitive: false);
-    final match = timeRegex.firstMatch(timeStr.trim());
-    
-    if (match == null) throw const FormatException('Formato de hora inválido');
-
-    var hour = int.parse(match.group(1)!);
-    final minute = int.parse(match.group(2)!);
-    final period = match.group(3)?.toUpperCase();
-
-    if (period == 'PM' && hour != 12) {
-      hour += 12;
-    } else if (period == 'AM' && hour == 12) {
-      hour = 0;
-    }
-
-    return TimeOfDay(hour: hour, minute: minute);
-  }
+  
 
   Future<void> _confirmAppointment(AppointmentController controller) async {
     final profileController = Provider.of<ProfileController>(context, listen: false);
@@ -687,11 +1075,6 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
         selectedServices,
         selectedCombos,
       );
-
-      debugPrint('Checking availability for barber: ${controller.selectedBarberId}');
-      debugPrint('At time: ${appointmentDateTime.toString()}');
-      debugPrint('With duration: $duration minutes');
-
       // Verificar disponibilidad
       final isAvailable = await controller.checkAvailability(
         barberId: controller.selectedBarberId!,
@@ -700,9 +1083,18 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
       );
 
       if (!isAvailable) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('El horario seleccionado no está disponible')),
+
+        final busyPeriods = await controller.getBusyPeriods(
+          controller.selectedBarberId!,
+          appointmentDateTime,
         );
+        final nextAvailable = await _findNextAvailableSlot(
+          barberId: controller.selectedBarberId!,
+          originalDate: appointmentDateTime,
+          duration: duration,
+        );
+        
+        await _showAvailabilityErrorDialog(nextAvailable, busyPeriods);
         return;
       }
 
@@ -715,9 +1107,6 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
       final barberName = barberDoc.exists 
           ? barberDoc['name']?.toString() ?? 'Barbero'
           : 'Barbero';
-
-      debugPrint('Creating appointment with barber: $barberName');
-
       // Crear la cita
       final appointmentId = await controller.createAppointment(
         userId: profileController.currentUser!.uid,
@@ -741,5 +1130,160 @@ void _toggleComboSelection(AppointmentController controller, String comboId) {
         SnackBar(content: Text('Error al confirmar cita: ${e.toString()}')),
       );
     }
+  }
+
+  Future<DateTime?> _findNextAvailableSlot({
+    required String barberId,
+    required DateTime originalDate,
+    required int duration,
+  }) async {
+    final barberController = context.read<BarberController>();
+    final appointmentService = AppointmentService();
+    
+    try {
+      final barber = await barberController.getBarberDetails(barberId);
+      DateTime currentDate = originalDate;
+      
+      // Buscar en los próximos 7 días
+      for (int i = 0; i < 7; i++) {
+        final day = currentDate.weekday - 1;
+        
+        if (barber.workingDays.contains(day)) {
+          final availableTime = await appointmentService.findAvailableTimeInDay(
+            barber: barber,
+            date: currentDate,
+            duration: duration,
+          );
+          
+          if (availableTime != null) return availableTime;
+        }
+        
+        currentDate = currentDate.add(const Duration(days: 1));
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error buscando próximo horario: $e');
+      return null;
+    }
+  }
+
+  Future<void> _showAvailabilityErrorDialog(
+    DateTime? nextAvailable, 
+    List<Map<String, DateTime>> busyPeriods
+  ) async {
+    final theme = Theme.of(context);
+    
+    await showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+            maxWidth: 400,
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Horario no disponible', 
+                style: theme.textTheme.titleLarge),
+              const SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Citas existentes:'),
+                      const SizedBox(height: 12),
+                      BusyTimeList(busyPeriods: busyPeriods),
+                      if (nextAvailable != null) ...[
+                        const SizedBox(height: 24),
+                        _NextAvailableSlot(nextAvailable: nextAvailable),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _DialogActions(nextAvailable: nextAvailable),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+class _NextAvailableSlot extends StatelessWidget {
+  final DateTime nextAvailable;
+
+  const _NextAvailableSlot({required this.nextAvailable});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.access_time, color: theme.colorScheme.primary),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                DateFormat('EEEE dd/MM', 'es_ES').format(nextAvailable),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                DateFormat('HH:mm').format(nextAvailable),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DialogActions extends StatelessWidget {
+  final DateTime? nextAvailable;
+
+  const _DialogActions({this.nextAvailable});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        if (nextAvailable != null)
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AppointmentController>()
+                .scheduleToDateTime(nextAvailable!);
+            },
+            child: const Text('Usar horario'),
+          ),
+      ],
+    );
   }
 }

@@ -1,11 +1,14 @@
 // controllers/barber_controller.dart
+import 'package:barber_xe/services/storage_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:barber_xe/models/barber_model.dart';
-import 'package:barber_xe/pages/services/barber_services.dart';
+import 'package:barber_xe/services/barber_services.dart';
 
 class BarberController with ChangeNotifier {
   final BarberService _barberService;
   List<Barber> _barbers = [];
+  final Map<int, List<Barber>> _barbersByDayCache = {};
   bool _isLoading = false;
   String _errorMessage = '';
 
@@ -23,6 +26,7 @@ class BarberController with ChangeNotifier {
 
     try {
       _barbers = await _barberService.getBarbers();
+      _barbers = _barbers;
       _errorMessage = '';
     } catch (e) {
       _errorMessage = e.toString();
@@ -33,11 +37,35 @@ class BarberController with ChangeNotifier {
     }
   }
 
-  Future<bool> addBarber(Barber barber) async {
+  Future<List<Barber>> getBarbersByDay(int day) async {
+    // Verificar caché primero
+    if (_barbersByDayCache.containsKey(day)) {
+      return _barbersByDayCache[day]!;
+    }
+    
+    try {
+      final barbers = await _barberService.getBarbersByWorkingDay(day);
+      _barbersByDayCache[day] = barbers; // Almacenar en caché
+      return barbers;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return [];
+    }
+  }
+
+  void clearDayCache(int day) {
+    _barbersByDayCache.remove(day);
+  }
+
+  Future<bool> addBarber(Barber barber, {dynamic imageFile}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
+      if (imageFile != null) {
+      final imageUrl = await uploadBarberImage(imageFile);
+      barber = barber.copyWith(photoUrl: imageUrl);
+    }
       await _barberService.addBarber(barber);
       await loadBarbers();
       return true;
@@ -48,11 +76,16 @@ class BarberController with ChangeNotifier {
     }
   }
 
-  Future<bool> updateBarber(Barber barber) async {
+  Future<bool> updateBarber(Barber barber, {dynamic imageFile}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
+      // Subir nueva imagen si existe
+      if (imageFile != null) {
+        final imageUrl = await uploadBarberImage(imageFile);
+        barber = barber.copyWith(photoUrl: imageUrl);
+      }
       await _barberService.updateBarber(barber);
       await loadBarbers();
       return true;
@@ -60,6 +93,17 @@ class BarberController with ChangeNotifier {
       _errorMessage = e.toString();
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<String?> uploadBarberImage(dynamic imageFile) async {
+    try {
+      final storage = StorageService();
+      return await storage.uploadBarberImage(imageFile);
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return null;
     }
   }
 
@@ -88,6 +132,22 @@ class BarberController with ChangeNotifier {
     }
   }
 
+  Future<Barber> getBarberDetails(String barberId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('barbers')
+          .doc(barberId)
+          .get();
+      
+      if (!doc.exists) throw Exception('Barbero no encontrado');
+      
+      return Barber.fromFirestore(doc);
+    } catch (e) {
+      throw Exception('Error obteniendo detalles del barbero: ${e.toString()}');
+    }
+  }
+
+
   Future<List<Barber>> getActiveBarbers() async {
     try {
       return await _barberService.getActiveBarbers();
@@ -96,5 +156,12 @@ class BarberController with ChangeNotifier {
       notifyListeners();
       return [];
     }
+  }
+
+  Barber getBarberById(String id) {
+    return _barbers.firstWhere(
+      (b) => b.id == id,
+      orElse: () => throw Exception('Barbero no encontrado')
+    );
   }
 }

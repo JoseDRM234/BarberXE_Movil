@@ -41,12 +41,15 @@ class BarbersPage extends StatelessWidget {
 
   void _showAddBarberDialog(BuildContext context) {
     final controller = Provider.of<BarberController>(context, listen: false);
-
     showDialog(
       context: context,
       builder: (context) => BarberFormDialog(
-        onSubmit: (newBarber) async {
-          final success = await controller.addBarber(newBarber);
+        onSubmit: (newBarber, image) async { // Ahora recibe 2 parámetros
+          final success = await controller.addBarber(
+            newBarber, 
+            imageFile: image // Pasar la imagen al controlador
+          );
+          
           if (success && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -145,28 +148,32 @@ class _BarberListState extends State<_BarberList> {
   }
 
   void _showEditBarberDialog(BuildContext context, Barber barber) {
-    final controller = Provider.of<BarberController>(context, listen: false);
-  
-    showDialog(
-      context: context,
-      builder: (context) => BarberFormDialog(
-        barber: barber,
-        onSubmit: (updatedBarber) async {
-          final success = await controller.updateBarber(updatedBarber);
-          if (success && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Barbero actualizado exitosamente',
-                  style: GoogleFonts.poppins(),
-                ),
+  final controller = Provider.of<BarberController>(context, listen: false);
+
+  showDialog(
+    context: context,
+    builder: (context) => BarberFormDialog(
+      barber: barber,
+      onSubmit: (updatedBarber, image) async { // Ahora recibe 2 parámetros
+        final success = await controller.updateBarber(
+          updatedBarber, 
+          imageFile: image // Pasar la imagen al controlador
+        );
+        
+        if (success && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Barbero actualizado exitosamente',
+                style: GoogleFonts.poppins(),
               ),
-            );
-          }
-        },
-      ),
-    );
-  }
+            ),
+          );
+        }
+      },
+    ),
+  );
+}
 
   Future<void> _confirmDeleteBarber(BuildContext context, String id) async {
     final confirmed = await showDialog<bool>(

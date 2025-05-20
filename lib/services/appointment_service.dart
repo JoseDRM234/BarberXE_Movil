@@ -1,3 +1,4 @@
+import 'package:barber_xe/models/barber_model.dart';
 import 'package:barber_xe/models/service_combo.dart';
 import 'package:barber_xe/models/service_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -18,26 +19,32 @@ class AppointmentService {
 
   Future<List<Appointment>> fetchUserAppointments({
     required String userId,
-    bool onlyUpcoming = false,
+    bool onlyUpcoming = false,  // Agrega este parámetro
+    DateTime? startDate,
+    DateTime? endDate,
+    String? status,
   }) async {
-    try {
-      Query query = _db.collection('appointments')
+    Query query = FirebaseFirestore.instance
+        .collection('appointments')
         .where('userId', isEqualTo: userId)
-        .orderBy('dateTime', descending: true); // Orden descendente por fecha
+        .orderBy('dateTime', descending: true);
 
-      if (onlyUpcoming) {
-        query = query.where(
-          'dateTime',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime.now()),
-        );
-      }
-
-      final snapshot = await query.get();
-      return snapshot.docs.map((d) => Appointment.fromFirestore(d)).toList();
-    } catch (e) {
-      debugPrint('Error fetching appointments: $e');
-      throw Exception('Error al cargar citas');
+    if (onlyUpcoming) {
+      query = query.where('dateTime', isGreaterThanOrEqualTo: DateTime.now());
     }
+
+    if (status != null) {
+      query = query.where('status', isEqualTo: status);
+    }
+
+    if (startDate != null && endDate != null) {
+      query = query
+          .where('dateTime', isGreaterThanOrEqualTo: startDate)
+          .where('dateTime', isLessThanOrEqualTo: endDate);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => Appointment.fromFirestore(doc)).toList();
   }
 
   Future<void> update({
@@ -91,83 +98,67 @@ class AppointmentService {
   }
 
   Future<bool> isBarberAvailable({
-  required String barberId,
-  required DateTime dateTime,
-  required int duration,
-}) async {
-  try {
-    debugPrint('Checking availability for barber $barberId at ${dateTime.toString()} for $duration minutes');
+    required String barberId,
+    required DateTime dateTime,
+    required int duration,
+  }) async {
+    try {
+      final barberDoc = await FirebaseFirestore.instance
+          .collection('barbers')
+          .doc(barberId)
+          .get();
+          
+      if (!barberDoc.exists) return false;
 
-    final barberDoc = await _db.collection('barbers').doc(barberId).get();
-    if (!barberDoc.exists) {
-      return false;
-    }
+      final barber = Barber.fromFirestore(barberDoc);
+      final weekday = dateTime.weekday - 1;
 
-    final barberData = barberDoc.data()!;
-
-    // Verificar día laborable CORREGIDO
-    final originalDay = dateTime.weekday;
-    debugPrint('Original weekday: ${dateTime.weekday}');
-
-    if (!barberData['workingDays'].contains(originalDay)) {
-      debugPrint('Barber does not work on this day');
-      return false;
-    }
-
-
-    if (!barberData.containsKey('workingHours') ||
-        !barberData['workingHours'].containsKey('start') ||
-        !barberData['workingHours'].containsKey('end')) {
-      return false;
-    }
-
-    final startTime = _parseTime(dateTime, barberData['workingHours']['start']);
-    final endTime = _parseTime(dateTime, barberData['workingHours']['end']);
-
-    final workStart = DateTime(dateTime.year, dateTime.month, dateTime.day, startTime.hour, startTime.minute);
-    final workEnd = DateTime(dateTime.year, dateTime.month, dateTime.day, endTime.hour, endTime.minute);
-
-
-    final appointmentEnd = dateTime.add(Duration(minutes: duration));
-    if (dateTime.isBefore(workStart) || appointmentEnd.isAfter(workEnd)) {
-      return false;
-    }
-
-    final startOfDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-
-    final query = _db
-        .collection('appointments')
-        .where('barberId', isEqualTo: barberId)
-        .where('status', whereIn: ['pending', 'confirmed'])
-        .where('dateTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('dateTime', isLessThan: Timestamp.fromDate(endOfDay));
-
-    final snapshot = await query.get();
-
-    for (final doc in snapshot.docs) {
-      final existingAppointment = Appointment.fromFirestore(doc);
-      final existingStart = existingAppointment.dateTime;
-      final existingEnd = existingAppointment.dateTime.add(Duration(minutes: existingAppointment.duration));
-
-
-      if ((dateTime.isBefore(existingEnd) && appointmentEnd.isAfter(existingStart))) {
+      // 1. Verificar día de trabajo
+      if (!barber.workingDays.contains(weekday)) {
         return false;
       }
+
+      // 2. Verificar horario laboral
+      final startParts = barber.workingHours['start']!.split(':');
+      final endParts = barber.workingHours['end']!.split(':');
+      
+      final workStart = DateTime(
+        dateTime.year,
+        dateTime.month,
+        dateTime.day,
+        int.parse(startParts[0]),
+        int.parse(startParts[1]),
+      );
+      
+      final workEnd = DateTime(
+        dateTime.year,
+        dateTime.month,
+        dateTime.day,
+        int.parse(endParts[0]),
+        int.parse(endParts[1]),
+      );
+
+      final appointmentEnd = dateTime.add(Duration(minutes: duration));
+      
+      if (dateTime.isBefore(workStart) || appointmentEnd.isAfter(workEnd)) {
+        return false;
+      }
+
+      // 3. Verificar colisiones con otras citas
+      final overlappingAppointments = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('barberId', isEqualTo: barberId)
+          .where('dateTime', isLessThan: Timestamp.fromDate(appointmentEnd))
+          .where('dateTime', isGreaterThan: Timestamp.fromDate(
+            dateTime.subtract(Duration(minutes: duration))
+          ))
+          .get();
+
+      return overlappingAppointments.docs.isEmpty;
+    } catch (e) {
+      debugPrint('Error checking availability: $e');
+      return false;
     }
-    return true;
-  } catch (e) {
-    debugPrint('Error checking availability: $e');
-    return false;
-  }
-}
-
-
-  // Ahora la función _parseTime acepta ambos parámetros, la fecha y la hora
-  DateTime _parseTime(DateTime date, String timeStr) {
-    final parts = timeStr.split(':');
-    return DateTime(date.year, date.month, date.day, 
-                  int.parse(parts[0]), int.parse(parts[1]));
   }
 
   static int calculateTotalDuration(List<BarberService> services, List<ServiceCombo> combos) {
@@ -179,5 +170,100 @@ class AppointmentService {
     return services.fold(0.0, (sum, s) => sum + s.price) +
             combos.fold(0.0, (sum, c) => sum + c.totalPrice);
   }
-  
+
+  Future<DateTime?> findAvailableTimeInDay({
+    required Barber barber,
+    required DateTime date,
+    required int duration,
+  }) async {
+    try {
+      final startTime = TimeOfDay.fromDateTime(DateTime.parse("2023-01-01 ${barber.workingHours['start']}"));
+      final endTime = TimeOfDay.fromDateTime(DateTime.parse("2023-01-01 ${barber.workingHours['end']}"));
+      
+      DateTime currentTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        startTime.hour,
+        startTime.minute,
+      );
+      
+      final endWorkDay = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        endTime.hour,
+        endTime.minute,
+      );
+
+      while (currentTime.add(Duration(minutes: duration)).isBefore(endWorkDay)) {
+        final isAvailable = await isBarberAvailable(
+          barberId: barber.id,
+          dateTime: currentTime,
+          duration: duration,
+        );
+        
+        if (isAvailable) return currentTime;
+        
+        currentTime = currentTime.add(const Duration(minutes: 30));
+      }
+      
+      return null;
+    } catch (e) {
+      throw Exception('Error buscando horario disponible: ${e.toString()}');
+    }
+  }
+
+  Future<List<Map<String, DateTime>>> getBarberAppointmentsForDay(String barberId, DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final snapshot = await _db.collection('appointments')
+        .where('barberId', isEqualTo: barberId)
+        .where('dateTime', isGreaterThanOrEqualTo: startOfDay)
+        .where('dateTime', isLessThan: endOfDay)
+        .get();
+
+    return snapshot.docs.map((doc) {
+      final appointment = Appointment.fromFirestore(doc);
+      return {
+        'start': appointment.dateTime,
+        'end': appointment.dateTime.add(Duration(minutes: appointment.duration))
+      };
+    }).toList();
+  }
+
+  Future<List<Appointment>> fetchAllAppointments({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? status,
+  }) async {
+    Query query = FirebaseFirestore.instance
+        .collection('appointments')
+        .orderBy('dateTime', descending: true);
+
+    if (status != null) {
+      query = query.where('status', isEqualTo: status);
+    }
+
+    if (startDate != null && endDate != null) {
+      query = query
+          .where('dateTime', isGreaterThanOrEqualTo: startDate)
+          .where('dateTime', isLessThanOrEqualTo: endDate);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => Appointment.fromFirestore(doc)).toList();
+  }
+
+  Future<void> updateStatus(String appointmentId, String newStatus) async {
+    await _db.collection('appointments').doc(appointmentId).update({
+      'status': newStatus,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteAppointment(String appointmentId) async {
+    await _db.collection('appointments').doc(appointmentId).delete();
+  }
 }
