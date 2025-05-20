@@ -5,6 +5,7 @@ import 'package:barber_xe/pages/widget/app_helpers.dart';
 import 'package:barber_xe/pages/widget/appointment_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -176,71 +177,117 @@ Widget build(BuildContext context) {
   );
 }
 
-  void _showAppointmentDetails(Appointment appointment) {
-    final priceFormatter = NumberFormat("#,###", "es_ES");
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Detalles de la Cita'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailItem('Cliente:', appointment.userName),
-              _buildDetailItem('Barbero:', appointment.barberName),
-              _buildDetailItem('Fecha:', 
-                DateFormat('EEEE, d MMMM y - HH:mm', 'es_ES').format(appointment.dateTime)),
-              _buildDetailItem('Duración:', '${appointment.duration} minutos'),
-              _buildDetailItem(
-                'Estado:', 
-                AppHelpers.getStatusText(appointment.status)
-              ),
-              const SizedBox(height: 12),
-              const Text('Servicios:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...appointment.serviceNames.map((s) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text('- $s'),
-              )),
-              if (appointment.comboNames.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const Text('Combos:', style: TextStyle(fontWeight: FontWeight.bold)),
-                ...appointment.comboNames.map((c) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text('- $c'),
-                )),
-              ],
+void _showAppointmentDetails(Appointment appointment) {
+  final priceFormatter = NumberFormat("#,###", "es_ES");
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      backgroundColor: Colors.white,
+      title: Text(
+        'Detalles de la Cita',
+        style: GoogleFonts.poppins(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDetailItem('Cliente', appointment.userName),
+            _buildDetailItem('Barbero', appointment.barberName),
+            _buildDetailItem(
+              'Fecha',
+              DateFormat('EEEE, d MMMM y - HH:mm', 'es_ES').format(appointment.dateTime),
+            ),
+            _buildDetailItem('Duración', '${appointment.duration} minutos'),
+            _buildDetailItem('Estado', AppHelpers.getStatusText(appointment.status)),
+
+            if (appointment.serviceNames.isNotEmpty) ...[
               const SizedBox(height: 16),
-              _buildDetailItem(
-                'Total:', 
-                '\$${priceFormatter.format(appointment.totalPrice)}'
-              ),
+              _buildSectionTitle('Servicios'),
+              ...appointment.serviceNames.map(_buildListItem),
             ],
+
+            if (appointment.comboNames.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildSectionTitle('Combos'),
+              ...appointment.comboNames.map(_buildListItem),
+            ],
+
+            const SizedBox(height: 20),
+            _buildDetailItem(
+              'Total',
+              '\$${priceFormatter.format(appointment.totalPrice)}',
+              isBold: true,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cerrar',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
-  Widget _buildDetailItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          const SizedBox(width: 8),
-          Flexible(child: Text(value)),
-        ],
-      ),
-    );
-  }
+Widget _buildDetailItem(String label, String value, {bool isBold = false}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[700],
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildSectionTitle(String title) {
+  return Text(
+    title,
+    style: GoogleFonts.poppins(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: Colors.black87,
+    ),
+  );
+}
+
+Widget _buildListItem(String text) {
+  return Padding(
+    padding: const EdgeInsets.only(top: 4, left: 12),
+    child: Text(
+      '– $text',
+      style: GoogleFonts.poppins(fontSize: 13.5),
+    ),
+  );
+}
 
   void _showAdminOptions(Appointment appointment) {
     showModalBottomSheet(
