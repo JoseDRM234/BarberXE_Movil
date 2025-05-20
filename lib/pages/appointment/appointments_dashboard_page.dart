@@ -1,6 +1,10 @@
+import 'package:barber_xe/controllers/profile_controller.dart';
+import 'package:barber_xe/pages/appointment/AdminAppointmentsPage.dart';
 import 'package:barber_xe/pages/appointment/appointment_page.dart';
+import 'package:barber_xe/pages/widget/appointment_filters.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'appointment_history_tab.dart';
 import 'appointment_manage_tab.dart';
 
@@ -9,6 +13,7 @@ class AppointmentsDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isAdmin = context.watch<ProfileController>().isAdmin;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -22,10 +27,26 @@ class AppointmentsDashboardPage extends StatelessWidget {
           ),
           backgroundColor: const Color.fromARGB(255, 0, 0, 0),
           foregroundColor: Colors.white,
+          actions: [
+            Consumer<ProfileController>(
+              builder: (context, profileController, _) {
+                final tabController = DefaultTabController.of(context);
+                return AnimatedBuilder(
+                  animation: tabController!,
+                  builder: (context, _) {
+                    return Visibility(
+                      visible: tabController.index == 0,
+                      child: const AppointmentFilters(),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
           bottom: TabBar(
             unselectedLabelColor: const Color.fromARGB(255, 200, 200, 200),
             labelColor: Colors.white,
-            indicatorColor: const Color.fromARGB(255, 255, 255, 255), // Color dorado para el indicador
+            indicatorColor: const Color.fromARGB(255, 255, 255, 255),
             labelStyle: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -36,16 +57,18 @@ class AppointmentsDashboardPage extends StatelessWidget {
             ),
             tabs: const [
               Tab(icon: Icon(Icons.history), text: 'Historial'), 
-              Tab(icon: Icon(Icons.add_box),text: 'Reservar' ), 
-              Tab(icon: Icon(Icons.edit_calendar),  text: 'Modificar'),
+              Tab(icon: Icon(Icons.add_box), text: 'Reservar'), 
+              Tab(icon: Icon(Icons.edit_calendar), text: 'Modificar'),
             ],
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
-            AppointmentHistoryTab(),
-            AppointmentPage(),
-            AppointmentManageTab(),
+            isAdmin 
+                ? const AdminAppointmentsPage()
+                : const AppointmentHistoryTab(),
+            const AppointmentPage(),
+            const AppointmentManageTab(),
           ],
         ),
       ),

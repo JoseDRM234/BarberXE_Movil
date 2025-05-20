@@ -62,22 +62,28 @@ class _AllServicesPageState extends State<AllServicesPage> {
           children: [
             _buildFilters(context, controller),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: controller.services.map((service) {
-                return SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.45,
-                  child: SelectableItemCard(
-                    title: service.name,
-                    price: service.price,
-                    duration: service.duration,
-                    imageUrl: service.imageUrl,
-                    isSelected: _selectedIds.contains(service.id),
-                    onTap: () => _toggleSelection(service.id),
-                  ),
+            // Widget modificado
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.75,
+              ),
+              itemCount: controller.services.length,
+              itemBuilder: (context, index) {
+                final service = controller.services[index];
+                return SelectableItemCard(
+                  title: service.name,
+                  price: service.price,
+                  duration: service.duration,
+                  imageUrl: service.imageUrl,
+                  isSelected: _selectedIds.contains(service.id),
+                  onTap: () => _toggleSelection(service.id),
                 );
-              }).toList(),
+              },
             ),
           ],
         ),
@@ -90,6 +96,7 @@ class _AllServicesPageState extends State<AllServicesPage> {
       children: [
         Expanded(
           child: DropdownButtonFormField<String>(
+            isExpanded: true,
             value: _selectedCategory,
             decoration: const InputDecoration(
               labelText: 'Categoría',
@@ -114,6 +121,7 @@ class _AllServicesPageState extends State<AllServicesPage> {
         const SizedBox(width: 10),
         Expanded(
           child: DropdownButtonFormField<String>(
+            isExpanded: true,
             value: _selectedSort,
             decoration: const InputDecoration(
               labelText: 'Ordenar por',

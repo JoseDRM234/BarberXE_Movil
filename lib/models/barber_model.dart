@@ -29,7 +29,7 @@ class Barber {
     return Barber(
       id: doc.id,
       name: data['name'] as String? ?? 'Sin nombre', // Valor por defecto
-      photoUrl: data['photoUrl'] as String?,
+      photoUrl: data['photoUrl'],
       status: data['status'] as String? ?? 'active', // Valor por defecto
       workingDays: List<int>.from(data['workingDays'] ?? []),
       workingHours: Map<String, String>.from(data['workingHours'] ?? 
