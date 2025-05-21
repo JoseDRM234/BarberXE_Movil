@@ -45,8 +45,8 @@ class AdminPanel extends StatelessWidget {
               children: [
                 _buildAdminButton(
                   context,
-                  icon: Icons.people,
-                  label: 'Clientes',
+                  icon: Icons.account_balance_wallet,
+                  label: 'Caja',
                   onPressed: () {},
                 ),
               ],

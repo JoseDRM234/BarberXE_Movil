@@ -59,6 +59,10 @@ class HomePage extends StatelessWidget {
           label: 'Barberos',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.notifications_outlined),
+          label: 'Notificaciones',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
           label: 'Perfil',
         ),
@@ -84,12 +88,11 @@ class HomePage extends StatelessWidget {
             });
             break;
           case 3:
-           WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.pushNamed(context, '/profile');
-            });
             break;
           case 4:
-           
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.pushNamed(context, '/profile');
+            });
             break;
         }
       },
