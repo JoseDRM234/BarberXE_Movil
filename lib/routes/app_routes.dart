@@ -1,11 +1,11 @@
 import 'package:barber_xe/models/service_model.dart';
+import 'package:barber_xe/pages/CashRegisterPage.dart';
 import 'package:barber_xe/pages/appointment/AdminAppointmentsPage.dart';
 import 'package:barber_xe/pages/appointment/appointment_page.dart';
 import 'package:barber_xe/pages/auth/login_page.dart';
 import 'package:barber_xe/pages/auth/register_page.dart';
 import 'package:barber_xe/pages/barber/barber_pages.dart';
 import 'package:barber_xe/pages/home/home_page.dart';
-import 'package:barber_xe/pages/notification/notifications_page.dart';
 import 'package:barber_xe/pages/profile/profile_page.dart';
 import 'package:barber_xe/pages/services/service_page.dart';
 import 'package:barber_xe/services/auth_service.dart';
@@ -22,8 +22,7 @@ class AppRouter {
   static const String appointments = '/appointments';
   static const String barbers = '/barbers';
   static const String adminAppointments = '/adminAppointments';
-  static const String notification = '/notification';
-
+  static const String cashRegister = '/cash-register';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final authService = Provider.of<AuthService>(navigatorKey.currentContext!, listen: false);
@@ -50,8 +49,6 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const LoginPage());
       case register:
         return MaterialPageRoute(builder: (_) => const RegisterPage());
-      case notification:
-        return MaterialPageRoute(builder: (_) => const NotificationsPage());
       case home:
         return MaterialPageRoute(builder: (_) => const HomePage());
       case profile:
@@ -67,6 +64,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const AdminAppointmentsPage());
       case appointments:
         return MaterialPageRoute(builder: (_) => const AppointmentPage());
+          case cashRegister: // Nueva ruta para el sistema de caja
+        return MaterialPageRoute(builder: (_) => const CashRegisterPage());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

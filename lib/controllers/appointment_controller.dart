@@ -454,5 +454,20 @@ class AppointmentController with ChangeNotifier {
     }
   }
 
-  
+  Future<void> adminUpdateAppointmentStatus({
+    required String appointmentId,
+    required String newStatus,
+  }) async {
+    if (!Appointment.statusOptions.contains(newStatus)) {
+      throw AppointmentException('Estado no válido');
+    }
+
+    try {
+      await _service.updateStatus(appointmentId, newStatus);
+      await loadAllAppointments();
+      notifyListeners();
+    } catch (e) {
+      throw Exception('Error actualizando estado: $e');
+    }
+  }
 }
