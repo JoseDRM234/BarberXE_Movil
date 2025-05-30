@@ -1,9 +1,11 @@
 import 'package:barber_xe/controllers/appointment_controller.dart';
 import 'package:barber_xe/controllers/barber_controller.dart';
+import 'package:barber_xe/controllers/cash_register_controller.dart';
 import 'package:barber_xe/controllers/services_controller.dart';
 import 'package:barber_xe/firebase_options.dart';
 import 'package:barber_xe/pages/auth/login_page.dart';
 import 'package:barber_xe/pages/home/home_page.dart';
+import 'package:barber_xe/services/appointment_service.dart';
 import 'package:barber_xe/services/barber_services.dart';
 import 'package:barber_xe/routes/app_routes.dart';
 import 'package:barber_xe/routes/route_names.dart';
@@ -45,6 +47,10 @@ void main() async {
         ChangeNotifierProvider(create: (_) => BarberController(
           barberService: BarberService(),
         )),
+          ChangeNotifierProvider(
+          create: (context) => CashRegisterController(
+          appointmentService: AppointmentService(),
+          )),
           ChangeNotifierProvider(
             create: (context) => ProfileController(
               authService: context.read<AuthService>(),

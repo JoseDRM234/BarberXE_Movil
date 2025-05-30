@@ -266,4 +266,107 @@ class AppointmentService {
   Future<void> deleteAppointment(String appointmentId) async {
     await _db.collection('appointments').doc(appointmentId).delete();
   }
+
+    /// Obtiene todas las citas en un rango de fechas para el reporte de caja
+  Future<List<Appointment>> getAppointmentsForCashRegister({
+    required DateTime startDate,
+    required DateTime endDate,
+    String? barberId,
+  }) async {
+    Query query = _db.collection('appointments')
+        .where('dateTime', isGreaterThanOrEqualTo: startDate)
+        .where('dateTime', isLessThanOrEqualTo: endDate)
+        .orderBy('dateTime', descending: true);
+
+    if (barberId != null) {
+      query = query.where('barberId', isEqualTo: barberId);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => Appointment.fromFirestore(doc)).toList();
+  }
+
+  /// Calcula los totales de ingresos por estado de citas
+  Future<Map<String, dynamic>> calculateCashRegisterTotals({
+    required DateTime startDate,
+    required DateTime endDate,
+    String? barberId,
+  }) async {
+    final appointments = await getAppointmentsForCashRegister(
+      startDate: startDate,
+      endDate: endDate,
+      barberId: barberId,
+    );
+
+    // Calcular totales por estado
+    final completed = appointments.where((a) => a.status == 'completed');
+    final pending = appointments.where((a) => a.status == 'pending');
+    final cancelled = appointments.where((a) => a.status == 'cancelled');
+
+    final completedTotal = completed.fold(0.0, (sum, a) => sum + a.totalPrice);
+    final pendingTotal = pending.fold(0.0, (sum, a) => sum + a.totalPrice);
+    final cancelledTotal = cancelled.fold(0.0, (sum, a) => sum + a.totalPrice);
+
+    return {
+      'completed': {
+        'count': completed.length,
+        'total': completedTotal,
+        'appointments': completed.toList(),
+      },
+      'pending': {
+        'count': pending.length,
+        'total': pendingTotal,
+        'appointments': pending.toList(),
+      },
+      'cancelled': {
+        'count': cancelled.length,
+        'total': cancelledTotal,
+        'appointments': cancelled.toList(),
+      },
+      'totalIncome': completedTotal,
+      'pendingAmount': pendingTotal,
+      'cancelledAmount': cancelledTotal,
+    };
+  }
+
+  /// Obtiene las citas completadas para un día específico
+  Future<List<Appointment>> getCompletedAppointmentsForDay(DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final snapshot = await _db.collection('appointments')
+        .where('status', isEqualTo: 'completed')
+        .where('dateTime', isGreaterThanOrEqualTo: startOfDay)
+        .where('dateTime', isLessThan: endOfDay)
+        .get();
+
+    return snapshot.docs.map((doc) => Appointment.fromFirestore(doc)).toList();
+  }
+
+  /// Genera un resumen diario de ingresos (sin método de pago)
+  Future<Map<String, dynamic>> generateDailySummary(DateTime date) async {
+    final appointments = await getCompletedAppointmentsForDay(date);
+    
+    if (appointments.isEmpty) {
+      return {
+        'date': date,
+        'totalIncome': 0.0,
+        'appointmentCount': 0,
+        'averageTicket': 0.0,
+      };
+    }
+
+    // Calcular total de ingresos
+    final totalIncome = appointments.fold(0.0, (sum, a) => sum + a.totalPrice);
+    
+    // Calcular ticket promedio
+    final averageTicket = totalIncome / appointments.length;
+
+    return {
+      'date': date,
+      'totalIncome': totalIncome,
+      'appointmentCount': appointments.length,
+      'averageTicket': averageTicket,
+    };
+  }
 }

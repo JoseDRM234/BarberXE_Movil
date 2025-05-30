@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // Asegúrate de importar esto
+import 'package:google_fonts/google_fonts.dart';
 
 class AdminPanel extends StatelessWidget {
   const AdminPanel({super.key});
@@ -47,7 +47,9 @@ class AdminPanel extends StatelessWidget {
                   context,
                   icon: Icons.account_balance_wallet,
                   label: 'Caja',
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/cash-register');
+                  },
                 ),
               ],
             ),
@@ -82,7 +84,7 @@ class AdminPanel extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             label,
-            style: GoogleFonts.poppins(), // Fuente aplicada aquí también
+            style: GoogleFonts.poppins(),
           ),
         ],
       ),
