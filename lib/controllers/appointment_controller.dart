@@ -338,6 +338,7 @@ class AppointmentController with ChangeNotifier {
       _selectedTime!.hour,
       _selectedTime!.minute,
     );
+    
 
     final appointment = Appointment(
       userId: userId,
@@ -355,7 +356,10 @@ class AppointmentController with ChangeNotifier {
       createdAt: DateTime.now(),
     );
 
+    
+
     return await _service.createAppointment(appointment);
+    
   }
 
   Future<void> updateAppointment({
@@ -449,4 +453,6 @@ class AppointmentController with ChangeNotifier {
       throw Exception('Error deleting appointment: $e');
     }
   }
+
+  
 }

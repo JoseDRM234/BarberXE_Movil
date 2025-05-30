@@ -1,6 +1,7 @@
 // controllers/barber_controller.dart
 import 'package:barber_xe/services/storage_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:barber_xe/models/barber_model.dart';
 import 'package:barber_xe/services/barber_services.dart';
@@ -63,9 +64,9 @@ class BarberController with ChangeNotifier {
 
     try {
       if (imageFile != null) {
-      final imageUrl = await uploadBarberImage(imageFile);
-      barber = barber.copyWith(photoUrl: imageUrl);
-    }
+        final imageUrl = await uploadBarberImage(imageFile);
+        barber = barber.copyWith(photoUrl: imageUrl);
+      }
       await _barberService.addBarber(barber);
       await loadBarbers();
       return true;
@@ -88,6 +89,99 @@ class BarberController with ChangeNotifier {
       }
       await _barberService.updateBarber(barber);
       await loadBarbers();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+   // Método actualizado para agregar/actualizar calificación por usuario
+  Future<bool> addRating(String barberId, double rating) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('Usuario no autenticado');
+      }
+
+      final barberIndex = _barbers.indexWhere((b) => b.id == barberId);
+      if (barberIndex == -1) {
+        throw Exception('Barbero no encontrado');
+      }
+
+      final currentBarber = _barbers[barberIndex];
+      final updatedBarber = currentBarber.addOrUpdateUserRating(user.uid, rating);
+
+      // Actualizar en Firestore
+      await FirebaseFirestore.instance
+          .collection('barbers')
+          .doc(barberId)
+          .update({
+        'userRatings': updatedBarber.userRatings,
+        'rating': updatedBarber.rating,
+        'totalRatings': updatedBarber.totalRatings,
+      });
+
+      // Actualizar localmente
+      _barbers[barberIndex] = updatedBarber;
+      notifyListeners();
+
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+  // Verificar si el usuario actual ya ha calificado a un barbero
+  bool hasCurrentUserRated(String barberId) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    final barber = _barbers.firstWhere(
+      (b) => b.id == barberId,
+      orElse: () => throw Exception('Barbero no encontrado'),
+    );
+
+    return barber.hasUserRated(user.uid);
+  }
+
+  // Obtener la calificación del usuario actual para un barbero
+  double? getCurrentUserRating(String barberId) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    try {
+      final barber = _barbers.firstWhere((b) => b.id == barberId);
+      return barber.getUserRating(user.uid);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Nuevo método para cambiar estado sin recargar todo
+  Future<bool> toggleBarberStatus(String barberId) async {
+    try {
+      // Buscar el barbero en la lista local
+      final barberIndex = _barbers.indexWhere((b) => b.id == barberId);
+      if (barberIndex == -1) {
+        throw Exception('Barbero no encontrado');
+      }
+
+      final currentBarber = _barbers[barberIndex];
+      final updatedBarber = currentBarber.toggleStatus();
+
+      // Actualizar en Firestore
+      await FirebaseFirestore.instance
+          .collection('barbers')
+          .doc(barberId)
+          .update({'status': updatedBarber.status});
+
+      // Actualizar localmente sin recargar
+      _barbers[barberIndex] = updatedBarber;
+      notifyListeners();
+
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -146,7 +240,6 @@ class BarberController with ChangeNotifier {
       throw Exception('Error obteniendo detalles del barbero: ${e.toString()}');
     }
   }
-
 
   Future<List<Barber>> getActiveBarbers() async {
     try {

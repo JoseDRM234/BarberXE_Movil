@@ -1,4 +1,5 @@
 import 'package:barber_xe/controllers/barber_controller.dart';
+import 'package:barber_xe/controllers/notification_controller.dart';
 import 'package:barber_xe/models/barber_model.dart';
 import 'package:barber_xe/pages/services/all_combos_page.dart';
 import 'package:barber_xe/pages/services/all_services_page.dart';

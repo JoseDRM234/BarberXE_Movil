@@ -99,12 +99,13 @@ class ProfileController with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _userService.updateUser(_currentUser!.uid, {
-        'nombre': data.nombre,
-        'apellido': data.apellido,
-        'telefono': data.telefono,
-        'photoUrl': data.fotoUrl, // Corregir nombre del campo
-      });
+      await _userService.updateUserInfo(
+      uid: _currentUser!.uid,
+      nombre: data.nombre,
+      apellido: data.apellido,
+      telefono: data.telefono,
+      photoUrl: data.fotoUrl,
+    );
 
       if (data.password != null && data.password!.isNotEmpty) {
         await _authService.updatePassword(data.password!);
@@ -137,11 +138,13 @@ class ProfileController with ChangeNotifier {
       );
 
       if (newImageUrl != null) {
-        await _userService.updateUser(_currentUser!.uid, {
-          'photoUrl': newImageUrl,
-        });
-        await loadCurrentUser(); // refresca datos locales
-      }
+      // ✅ Correct way using updateUserInfo
+      await _userService.updateUserInfo(
+        uid: _currentUser!.uid,
+        photoUrl: newImageUrl,
+      );
+      await loadCurrentUser(); // refresca datos locales
+    }
 
       return newImageUrl;
     } catch (e) {
